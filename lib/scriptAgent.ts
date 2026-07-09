@@ -7,6 +7,10 @@ const WORD_TARGETS: Record<number, string> = {
   30: "70-90 words",
   45: "100-130 words",
   60: "140-170 words",
+  120: "280-340 words",
+  300: "700-850 words",
+  480: "1120-1360 words",
+  600: "1400-1700 words",
 };
 
 interface AiSceneContent {
@@ -38,6 +42,13 @@ const SCENE_SCHEMA = {
 };
 
 function buildResponseSchema(sceneCount: number) {
+  // Gemini rejects schemas with a large exact-length array constraint
+  // ("too many states for serving"), so only pin minItems/maxItems for
+  // small scene counts; longer videos rely on the prompt's "exactly N
+  // scenes" instruction plus the caller's own count/duplicate checks.
+  const lengthConstraint =
+    sceneCount <= 15 ? { minItems: sceneCount, maxItems: sceneCount } : {};
+
   return {
     type: "object",
     properties: {
@@ -46,8 +57,7 @@ function buildResponseSchema(sceneCount: number) {
       scenes: {
         type: "array",
         items: SCENE_SCHEMA,
-        minItems: sceneCount,
-        maxItems: sceneCount,
+        ...lengthConstraint,
       },
     },
     required: ["title", "script", "scenes"],
@@ -94,7 +104,15 @@ export async function generateScriptAndScenes(input: GenerateInput): Promise<Gen
   const sceneCount = sceneCountForDuration(input.settings.duration);
   const prompt = buildPrompt(input, sceneCount);
 
-  const ai = await generateJSON<AiScriptResponse>(prompt, buildResponseSchema(sceneCount));
+  // Each scene's JSON fields run roughly 150-250 tokens; longer videos need a
+  // proportionally larger output budget or Gemini truncates the response.
+  const maxOutputTokens = Math.min(65536, sceneCount * 300 + 3000);
+
+  const ai = await generateJSON<AiScriptResponse>(
+    prompt,
+    buildResponseSchema(sceneCount),
+    maxOutputTokens
+  );
 
   if (!ai.scenes || ai.scenes.length === 0) {
     throw new Error("Gemini returned no scenes.");

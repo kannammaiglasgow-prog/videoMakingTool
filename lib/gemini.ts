@@ -7,7 +7,11 @@ function getApiKey() {
   return key;
 }
 
-export async function generateJSON<T>(prompt: string, responseSchema: object): Promise<T> {
+export async function generateJSON<T>(
+  prompt: string,
+  responseSchema: object,
+  maxOutputTokens = 8192
+): Promise<T> {
   const key = getApiKey();
   const res = await fetch(`${API_BASE}/${TEXT_MODEL}:generateContent?key=${key}`, {
     method: "POST",
@@ -17,7 +21,7 @@ export async function generateJSON<T>(prompt: string, responseSchema: object): P
       generationConfig: {
         responseMimeType: "application/json",
         responseSchema,
-        maxOutputTokens: 8192,
+        maxOutputTokens,
         thinkingConfig: { thinkingBudget: 0 },
       },
     }),

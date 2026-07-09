@@ -2,7 +2,13 @@ export function sceneCountForDuration(duration: number) {
   if (duration <= 15) return 3;
   if (duration <= 30) return 6;
   if (duration <= 45) return 7;
-  return 8;
+  if (duration <= 60) return 8;
+  // Longer-form videos: aim for roughly a 15-18s average scene length so the
+  // scene count (and the number of paid image/voiceover calls) stays sane.
+  if (duration <= 120) return 10;
+  if (duration <= 300) return 20;
+  if (duration <= 480) return 28;
+  return 34;
 }
 
 export function buildSceneTimestamps(duration: number, count: number) {

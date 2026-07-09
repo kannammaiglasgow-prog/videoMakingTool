@@ -15,7 +15,13 @@ import {
   Voice,
 } from "@/types/project";
 
-const LENGTHS: VideoLength[] = [15, 30, 45, 60];
+const LENGTHS: VideoLength[] = [15, 30, 45, 60, 120, 300, 480, 600];
+
+function formatLength(seconds: VideoLength): string {
+  if (seconds < 60) return `${seconds} sec`;
+  const minutes = seconds / 60;
+  return `${minutes} min`;
+}
 const LANGUAGES: Language[] = ["Tamil", "English", "Hindi", "Malayalam", "Telugu"];
 const AUDIENCES: Audience[] = ["General public", "Students", "Parents", "Professionals", "Kids"];
 const TONES: Tone[] = [
@@ -143,7 +149,7 @@ export default function CreateForm() {
           >
             {LENGTHS.map((v) => (
               <option key={v} value={v}>
-                {v} sec
+                {formatLength(v)}
               </option>
             ))}
           </select>
