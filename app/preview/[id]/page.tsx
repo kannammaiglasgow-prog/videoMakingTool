@@ -160,7 +160,11 @@ export default function PreviewPage() {
     }
   }
 
-  async function handlePixabaySearch(sceneNumber: number, defaultQuery: string) {
+  async function handleStockVideoSearch(
+    provider: "pixabay" | "pexels",
+    sceneNumber: number,
+    defaultQuery: string
+  ) {
     if (!project) return;
     const query = (pixabayQueries[sceneNumber] ?? defaultQuery).trim();
     if (!query) return;
@@ -168,14 +172,15 @@ export default function PreviewPage() {
     setRegeneratingScene(sceneNumber);
     setAssetsError(null);
     try {
-      const res = await fetch("/api/assets/pixabay-video", {
+      const endpoint = provider === "pixabay" ? "/api/assets/pixabay-video" : "/api/assets/pexels-video";
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ projectId: project.id, sceneNumber, query }),
       });
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error ?? "Pixabay video search failed.");
+        throw new Error(data.error ?? "Stock video search failed.");
       }
       const { videoClipUrl, credit } = await res.json();
       const scenes = project.scenes.map((s) =>
@@ -401,7 +406,7 @@ export default function PreviewPage() {
               <div className="mb-3 flex flex-wrap items-center gap-2">
                 <input
                   type="text"
-                  placeholder="Pixabay search (English keywords, e.g. cat swimming beach)"
+                  placeholder="Stock video search (English keywords, e.g. cat swimming beach)"
                   className="min-w-0 flex-1 rounded-md border border-zinc-300 bg-white px-2 py-1 text-xs dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-200"
                   value={pixabayQueries[scene.scene] ?? defaultPixabayQuery(scene.imagePrompt)}
                   onChange={(e) =>
@@ -409,11 +414,22 @@ export default function PreviewPage() {
                   }
                 />
                 <button
-                  onClick={() => handlePixabaySearch(scene.scene, defaultPixabayQuery(scene.imagePrompt))}
+                  onClick={() =>
+                    handleStockVideoSearch("pixabay", scene.scene, defaultPixabayQuery(scene.imagePrompt))
+                  }
                   disabled={regeneratingScene !== null}
                   className="whitespace-nowrap rounded-full border border-zinc-300 px-3 py-1 text-xs font-medium text-zinc-800 hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
                 >
                   {regeneratingScene === scene.scene ? "Searching..." : "Use Pixabay video"}
+                </button>
+                <button
+                  onClick={() =>
+                    handleStockVideoSearch("pexels", scene.scene, defaultPixabayQuery(scene.imagePrompt))
+                  }
+                  disabled={regeneratingScene !== null}
+                  className="whitespace-nowrap rounded-full border border-zinc-300 px-3 py-1 text-xs font-medium text-zinc-800 hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                >
+                  {regeneratingScene === scene.scene ? "Searching..." : "Use Pexels video"}
                 </button>
               </div>
 
