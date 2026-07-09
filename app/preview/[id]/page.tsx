@@ -91,6 +91,37 @@ export default function PreviewPage() {
     }
   }
 
+  async function ensureVoiceover(currentProject: GeneratedProject, sceneNumber: number) {
+    const res = await fetch("/api/assets", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        project: currentProject,
+        sceneNumbers: [sceneNumber],
+        assetTypes: ["audio"],
+      }),
+    });
+    if (!res.ok) {
+      const data = await res.json();
+      throw new Error(data.error ?? "Voiceover generation failed.");
+    }
+    return (await res.json()) as GeneratedProject;
+  }
+
+  async function handleGenerateVoiceover(sceneNumber: number) {
+    if (!project) return;
+    setRegeneratingScene(sceneNumber);
+    setAssetsError(null);
+    try {
+      const updated = await ensureVoiceover(project, sceneNumber);
+      persist(updated);
+    } catch (err) {
+      setAssetsError(err instanceof Error ? err.message : "Something went wrong.");
+    } finally {
+      setRegeneratingScene(null);
+    }
+  }
+
   async function handleUploadImage(sceneNumber: number, file: File) {
     if (!project) return;
     setRegeneratingScene(sceneNumber);
@@ -116,7 +147,12 @@ export default function PreviewPage() {
       const scenes = project.scenes.map((s) =>
         s.scene === sceneNumber ? { ...s, imageUrl: `${imageUrl}?t=${Date.now()}`, assetError: undefined } : s
       );
-      persist({ ...project, scenes, assetsGenerated: true });
+      let updated: GeneratedProject = { ...project, scenes, assetsGenerated: true };
+      const scene = scenes.find((s) => s.scene === sceneNumber);
+      if (!scene?.audioUrl) {
+        updated = await ensureVoiceover(updated, sceneNumber);
+      }
+      persist(updated);
     } catch (err) {
       setAssetsError(err instanceof Error ? err.message : "Something went wrong.");
     } finally {
@@ -153,7 +189,12 @@ export default function PreviewPage() {
             }
           : s
       );
-      persist({ ...project, scenes, assetsGenerated: true });
+      let updated: GeneratedProject = { ...project, scenes, assetsGenerated: true };
+      const scene = scenes.find((s) => s.scene === sceneNumber);
+      if (!scene?.audioUrl) {
+        updated = await ensureVoiceover(updated, sceneNumber);
+      }
+      persist(updated);
     } catch (err) {
       setAssetsError(err instanceof Error ? err.message : "Something went wrong.");
     } finally {
@@ -328,6 +369,17 @@ export default function PreviewPage() {
                     className="rounded-full border border-zinc-300 px-3 py-1 text-xs font-medium text-zinc-800 hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
                   >
                     {regeneratingScene === scene.scene ? "Working..." : "Regenerate"}
+                  </button>
+                  <button
+                    onClick={() => handleGenerateVoiceover(scene.scene)}
+                    disabled={regeneratingScene !== null}
+                    className="rounded-full border border-zinc-300 px-3 py-1 text-xs font-medium text-zinc-800 hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                  >
+                    {regeneratingScene === scene.scene
+                      ? "Working..."
+                      : scene.audioUrl
+                        ? "Regenerate voiceover"
+                        : "Generate voiceover"}
                   </button>
                   <label className="cursor-pointer rounded-full border border-zinc-300 px-3 py-1 text-xs font-medium text-zinc-800 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800">
                     Upload image

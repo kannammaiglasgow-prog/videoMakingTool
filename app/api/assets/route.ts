@@ -7,9 +7,10 @@ import { generateSrt, generateVtt } from "@/lib/subtitles";
 import { GeneratedProject } from "@/types/project";
 
 export async function POST(request: NextRequest) {
-  const { project, sceneNumbers } = (await request.json()) as {
+  const { project, sceneNumbers, assetTypes } = (await request.json()) as {
     project: GeneratedProject;
     sceneNumbers?: number[];
+    assetTypes?: ("image" | "audio")[];
   };
 
   if (!project?.id || !project.scenes?.length) {
@@ -19,6 +20,9 @@ export async function POST(request: NextRequest) {
   if (!process.env.GEMINI_API_KEY) {
     return NextResponse.json({ error: "GEMINI_API_KEY is not configured." }, { status: 500 });
   }
+
+  const wantImage = !assetTypes || assetTypes.includes("image");
+  const wantAudio = !assetTypes || assetTypes.includes("audio");
 
   const dir = path.join(process.cwd(), "public", "generated", project.id);
   await fs.mkdir(dir, { recursive: true });
@@ -32,24 +36,29 @@ export async function POST(request: NextRequest) {
       }
 
       const result = { ...scene, assetError: undefined };
-      try {
-        const imageBuffer = await generateSceneImage(scene.imagePrompt);
-        const imageFile = `scene-${scene.scene}.png`;
-        await fs.writeFile(path.join(dir, imageFile), imageBuffer);
-        result.imageUrl = `/generated/${project.id}/${imageFile}`;
-      } catch (err) {
-        result.assetError = `Image generation failed: ${err instanceof Error ? err.message : "unknown error"}`;
+
+      if (wantImage) {
+        try {
+          const imageBuffer = await generateSceneImage(scene.imagePrompt);
+          const imageFile = `scene-${scene.scene}.png`;
+          await fs.writeFile(path.join(dir, imageFile), imageBuffer);
+          result.imageUrl = `/generated/${project.id}/${imageFile}`;
+        } catch (err) {
+          result.assetError = `Image generation failed: ${err instanceof Error ? err.message : "unknown error"}`;
+        }
       }
 
-      try {
-        const audioBuffer = await generateVoiceover(scene.voiceover, project.voice);
-        const audioFile = `scene-${scene.scene}.wav`;
-        await fs.writeFile(path.join(dir, audioFile), audioBuffer);
-        result.audioUrl = `/generated/${project.id}/${audioFile}`;
-      } catch (err) {
-        result.assetError = [result.assetError, `Voiceover generation failed: ${err instanceof Error ? err.message : "unknown error"}`]
-          .filter(Boolean)
-          .join(" | ");
+      if (wantAudio) {
+        try {
+          const audioBuffer = await generateVoiceover(scene.voiceover, project.voice);
+          const audioFile = `scene-${scene.scene}.wav`;
+          await fs.writeFile(path.join(dir, audioFile), audioBuffer);
+          result.audioUrl = `/generated/${project.id}/${audioFile}`;
+        } catch (err) {
+          result.assetError = [result.assetError, `Voiceover generation failed: ${err instanceof Error ? err.message : "unknown error"}`]
+            .filter(Boolean)
+            .join(" | ");
+        }
       }
 
       return result;
