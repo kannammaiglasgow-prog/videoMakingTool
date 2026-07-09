@@ -15,6 +15,7 @@ export default function PreviewPage() {
   const [regeneratingScene, setRegeneratingScene] = useState<number | null>(null);
   const [editing, setEditing] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
+  const [pixabayQueries, setPixabayQueries] = useState<Record<number, string>>({});
 
   useEffect(() => {
     const raw = localStorage.getItem(`project:${params.id}`);
@@ -109,6 +110,43 @@ export default function PreviewPage() {
       const { imageUrl } = await res.json();
       const scenes = project.scenes.map((s) =>
         s.scene === sceneNumber ? { ...s, imageUrl: `${imageUrl}?t=${Date.now()}`, assetError: undefined } : s
+      );
+      persist({ ...project, scenes, assetsGenerated: true });
+    } catch (err) {
+      setAssetsError(err instanceof Error ? err.message : "Something went wrong.");
+    } finally {
+      setRegeneratingScene(null);
+    }
+  }
+
+  async function handlePixabaySearch(sceneNumber: number, defaultQuery: string) {
+    if (!project) return;
+    const query = (pixabayQueries[sceneNumber] ?? defaultQuery).trim();
+    if (!query) return;
+
+    setRegeneratingScene(sceneNumber);
+    setAssetsError(null);
+    try {
+      const res = await fetch("/api/assets/pixabay-video", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId: project.id, sceneNumber, query }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error ?? "Pixabay video search failed.");
+      }
+      const { videoClipUrl, credit } = await res.json();
+      const scenes = project.scenes.map((s) =>
+        s.scene === sceneNumber
+          ? {
+              ...s,
+              mediaType: "video" as const,
+              videoClipUrl: `${videoClipUrl}?t=${Date.now()}`,
+              videoClipCredit: credit,
+              assetError: undefined,
+            }
+          : s
       );
       persist({ ...project, scenes, assetsGenerated: true });
     } catch (err) {
@@ -303,15 +341,43 @@ export default function PreviewPage() {
                 </div>
               </div>
 
-              {(scene.imageUrl || scene.audioUrl) && (
-                <div className="mb-3 flex flex-wrap items-start gap-4">
-                  {scene.imageUrl && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={scene.imageUrl}
-                      alt={`Scene ${scene.scene} visual`}
+              <div className="mb-3 flex flex-wrap items-center gap-2">
+                <input
+                  type="text"
+                  placeholder="Pixabay search (e.g. cat swimming beach)"
+                  className="min-w-0 flex-1 rounded-md border border-zinc-300 bg-white px-2 py-1 text-xs dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-200"
+                  value={pixabayQueries[scene.scene] ?? scene.visual.split(",")[0].slice(0, 60)}
+                  onChange={(e) =>
+                    setPixabayQueries((prev) => ({ ...prev, [scene.scene]: e.target.value }))
+                  }
+                />
+                <button
+                  onClick={() => handlePixabaySearch(scene.scene, scene.visual)}
+                  disabled={regeneratingScene !== null}
+                  className="whitespace-nowrap rounded-full border border-zinc-300 px-3 py-1 text-xs font-medium text-zinc-800 hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                >
+                  {regeneratingScene === scene.scene ? "Searching..." : "Use Pixabay video"}
+                </button>
+              </div>
+
+              {(scene.imageUrl || scene.videoClipUrl || scene.audioUrl) && (
+                <div className="mb-1 flex flex-wrap items-start gap-4">
+                  {scene.mediaType === "video" && scene.videoClipUrl ? (
+                    <video
+                      controls
+                      muted
+                      src={scene.videoClipUrl}
                       className="h-48 w-auto rounded-md object-cover"
                     />
+                  ) : (
+                    scene.imageUrl && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={scene.imageUrl}
+                        alt={`Scene ${scene.scene} visual`}
+                        className="h-48 w-auto rounded-md object-cover"
+                      />
+                    )
                   )}
                   {scene.audioUrl && (
                     <audio controls src={scene.audioUrl} className="mt-2">
@@ -319,6 +385,9 @@ export default function PreviewPage() {
                     </audio>
                   )}
                 </div>
+              )}
+              {scene.mediaType === "video" && scene.videoClipCredit && (
+                <p className="mb-3 text-[11px] text-zinc-500">{scene.videoClipCredit}</p>
               )}
               {scene.assetError && (
                 <p className="mb-2 text-xs text-red-600">{scene.assetError}</p>

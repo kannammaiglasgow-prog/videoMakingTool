@@ -9,12 +9,11 @@ export async function renderProject(project: GeneratedProject, dir: string): Pro
   const segmentFiles: string[] = [];
 
   for (const scene of project.scenes) {
-    if (!scene.imageUrl || !scene.audioUrl) {
-      throw new Error(`Scene ${scene.scene} is missing generated image or audio assets.`);
+    if (!scene.audioUrl || (!scene.imageUrl && !scene.videoClipUrl)) {
+      throw new Error(`Scene ${scene.scene} is missing generated visual or audio assets.`);
     }
 
     const duration = Math.max(1, parseTimeToSeconds(scene.end) - parseTimeToSeconds(scene.start));
-    const imageFile = `scene-${scene.scene}.png`;
     const audioFile = `scene-${scene.scene}.wav`;
     const fixedAudioFile = `scene-${scene.scene}-fixed.wav`;
     const segmentFile = `segment-${scene.scene}.mp4`;
@@ -24,30 +23,64 @@ export async function renderProject(project: GeneratedProject, dir: string): Pro
       dir
     );
 
-    await runFfmpeg(
-      [
-        "-y",
-        "-loop",
-        "1",
-        "-i",
-        imageFile,
-        "-i",
-        fixedAudioFile,
-        "-vf",
-        "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,fps=30",
-        "-c:v",
-        "libx264",
-        "-pix_fmt",
-        "yuv420p",
-        "-c:a",
-        "aac",
-        "-t",
-        String(duration),
-        "-shortest",
-        segmentFile,
-      ],
-      dir
-    );
+    const useVideoClip = scene.mediaType === "video" && scene.videoClipUrl;
+
+    if (useVideoClip) {
+      const clipFile = `scene-${scene.scene}-clip.mp4`;
+      await runFfmpeg(
+        [
+          "-y",
+          "-stream_loop",
+          "-1",
+          "-i",
+          clipFile,
+          "-i",
+          fixedAudioFile,
+          "-vf",
+          "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,fps=30",
+          "-map",
+          "0:v:0",
+          "-map",
+          "1:a:0",
+          "-c:v",
+          "libx264",
+          "-pix_fmt",
+          "yuv420p",
+          "-c:a",
+          "aac",
+          "-t",
+          String(duration),
+          segmentFile,
+        ],
+        dir
+      );
+    } else {
+      const imageFile = `scene-${scene.scene}.png`;
+      await runFfmpeg(
+        [
+          "-y",
+          "-loop",
+          "1",
+          "-i",
+          imageFile,
+          "-i",
+          fixedAudioFile,
+          "-vf",
+          "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,fps=30",
+          "-c:v",
+          "libx264",
+          "-pix_fmt",
+          "yuv420p",
+          "-c:a",
+          "aac",
+          "-t",
+          String(duration),
+          "-shortest",
+          segmentFile,
+        ],
+        dir
+      );
+    }
 
     segmentFiles.push(segmentFile);
   }

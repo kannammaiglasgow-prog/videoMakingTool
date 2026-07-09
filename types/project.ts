@@ -79,6 +79,9 @@ export interface Scene {
   imageUrl?: string;
   audioUrl?: string;
   assetError?: string;
+  mediaType?: "image" | "video";
+  videoClipUrl?: string;
+  videoClipCredit?: string;
 }
 
 export interface GeneratedProject {
