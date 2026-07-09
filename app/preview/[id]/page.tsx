@@ -85,6 +85,39 @@ export default function PreviewPage() {
     }
   }
 
+  async function handleUploadImage(sceneNumber: number, file: File) {
+    if (!project) return;
+    setRegeneratingScene(sceneNumber);
+    setAssetsError(null);
+    try {
+      const imageDataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      const res = await fetch("/api/assets/upload-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId: project.id, sceneNumber, imageDataUrl }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error ?? "Image upload failed.");
+      }
+      const { imageUrl } = await res.json();
+      const scenes = project.scenes.map((s) =>
+        s.scene === sceneNumber ? { ...s, imageUrl: `${imageUrl}?t=${Date.now()}`, assetError: undefined } : s
+      );
+      persist({ ...project, scenes, assetsGenerated: true });
+    } catch (err) {
+      setAssetsError(err instanceof Error ? err.message : "Something went wrong.");
+    } finally {
+      setRegeneratingScene(null);
+    }
+  }
+
   async function handleSaveProject() {
     if (!project) return;
     setSaveStatus("saving");
@@ -251,8 +284,22 @@ export default function PreviewPage() {
                     disabled={regeneratingScene !== null}
                     className="rounded-full border border-zinc-300 px-3 py-1 text-xs font-medium text-zinc-800 hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
                   >
-                    {regeneratingScene === scene.scene ? "Regenerating..." : "Regenerate"}
+                    {regeneratingScene === scene.scene ? "Working..." : "Regenerate"}
                   </button>
+                  <label className="cursor-pointer rounded-full border border-zinc-300 px-3 py-1 text-xs font-medium text-zinc-800 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800">
+                    Upload image
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      disabled={regeneratingScene !== null}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleUploadImage(scene.scene, file);
+                        e.target.value = "";
+                      }}
+                    />
+                  </label>
                 </div>
               </div>
 
