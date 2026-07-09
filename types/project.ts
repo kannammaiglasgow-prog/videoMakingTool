@@ -46,7 +46,7 @@ export type VisualStyle =
   | "Cinematic"
   | "Cartoon";
 
-export type Platform = "YouTube Shorts" | "Instagram Reel" | "TikTok";
+export type Platform = "YouTube Shorts" | "YouTube Video" | "Instagram Reel" | "TikTok";
 
 export interface ProjectSettings {
   duration: VideoLength;

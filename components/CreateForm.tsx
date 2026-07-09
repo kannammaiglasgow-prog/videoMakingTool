@@ -32,7 +32,7 @@ const STYLES: Style[] = ["Breaking news", "Storytelling", "Comedy", "Educational
 const VOICES: Voice[] = ["Male", "Female", "News reader", "Narrator"];
 const MUSIC_STYLES: MusicStyle[] = ["Auto", "No music", "Emotional", "Funny", "Suspense", "News", "Cinematic"];
 const VISUAL_STYLES: VisualStyle[] = ["Realistic", "AI art", "3D", "Documentary", "Cinematic", "Cartoon"];
-const PLATFORMS: Platform[] = ["YouTube Shorts", "Instagram Reel", "TikTok"];
+const PLATFORMS: Platform[] = ["YouTube Shorts", "YouTube Video", "Instagram Reel", "TikTok"];
 
 const DEFAULT_SETTINGS: ProjectSettings = {
   duration: 30,
