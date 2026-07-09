@@ -10,9 +10,18 @@ const SCENE_LABELS = [
   "Conclusion and call to action",
 ];
 
+// eslint-disable-next-line no-control-regex
+const NON_ASCII = /[^\x00-\x7F]/;
+
 export function mockGenerateProject(input: GenerateInput): GeneratedProject {
   const { text, settings } = input;
   const topic = text.trim().split(/\s+/).slice(0, 8).join(" ") || "Untitled topic";
+  // Image prompts (and anything derived from them, like Pixabay search) must stay in
+  // English regardless of the input/script language, so non-Latin topics get a
+  // generic English stand-in here instead of the raw non-English text.
+  const englishSubject = NON_ASCII.test(topic)
+    ? `a ${settings.tone.toLowerCase()} news story`
+    : topic;
   const sceneCount = sceneCountForDuration(settings.duration);
   const timestamps = buildSceneTimestamps(settings.duration, sceneCount);
 
@@ -24,7 +33,7 @@ export function mockGenerateProject(input: GenerateInput): GeneratedProject {
       end: formatTime(t.end),
       voiceover: `[${label}] ${topic} — line ${i + 1} of the ${settings.tone.toLowerCase()} script.`,
       visual: `${settings.visualStyle} visual depicting ${topic} (${label.toLowerCase()}).`,
-      imagePrompt: `A ${settings.visualStyle.toLowerCase()} 9:16 vertical image of ${topic}, ${settings.tone.toLowerCase()} mood, cinematic lighting, no text in image.`,
+      imagePrompt: `A ${settings.visualStyle.toLowerCase()} 9:16 vertical image related to ${englishSubject}, ${settings.tone.toLowerCase()} mood, cinematic lighting, no text in image.`,
       cameraMovement: i === 0 ? "Slow zoom in" : i === timestamps.length - 1 ? "Static hold" : "Slow pan",
       subtitle: `${label}: ${topic}`,
       soundEffect: i === 0 ? "Whoosh" : i === timestamps.length - 1 ? "Soft fade" : "Subtle transition",
