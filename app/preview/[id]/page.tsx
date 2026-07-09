@@ -5,6 +5,11 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { GeneratedProject } from "@/types/project";
 
+function defaultPixabayQuery(imagePrompt: string): string {
+  const firstSentence = imagePrompt.split(".")[0] ?? imagePrompt;
+  return firstSentence.trim().split(/\s+/).slice(0, 10).join(" ");
+}
+
 export default function PreviewPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
@@ -344,15 +349,15 @@ export default function PreviewPage() {
               <div className="mb-3 flex flex-wrap items-center gap-2">
                 <input
                   type="text"
-                  placeholder="Pixabay search (e.g. cat swimming beach)"
+                  placeholder="Pixabay search (English keywords, e.g. cat swimming beach)"
                   className="min-w-0 flex-1 rounded-md border border-zinc-300 bg-white px-2 py-1 text-xs dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-200"
-                  value={pixabayQueries[scene.scene] ?? scene.visual.split(",")[0].slice(0, 60)}
+                  value={pixabayQueries[scene.scene] ?? defaultPixabayQuery(scene.imagePrompt)}
                   onChange={(e) =>
                     setPixabayQueries((prev) => ({ ...prev, [scene.scene]: e.target.value }))
                   }
                 />
                 <button
-                  onClick={() => handlePixabaySearch(scene.scene, scene.visual)}
+                  onClick={() => handlePixabaySearch(scene.scene, defaultPixabayQuery(scene.imagePrompt))}
                   disabled={regeneratingScene !== null}
                   className="whitespace-nowrap rounded-full border border-zinc-300 px-3 py-1 text-xs font-medium text-zinc-800 hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
                 >
