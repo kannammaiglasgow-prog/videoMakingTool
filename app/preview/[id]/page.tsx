@@ -12,6 +12,7 @@ export default function PreviewPage() {
   const [notFound, setNotFound] = useState(false);
   const [generatingAssets, setGeneratingAssets] = useState(false);
   const [assetsError, setAssetsError] = useState<string | null>(null);
+  const [regeneratingScene, setRegeneratingScene] = useState<number | null>(null);
   const [editing, setEditing] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
 
@@ -58,6 +59,29 @@ export default function PreviewPage() {
       setAssetsError(err instanceof Error ? err.message : "Something went wrong.");
     } finally {
       setGeneratingAssets(false);
+    }
+  }
+
+  async function handleRegenerateScene(sceneNumber: number) {
+    if (!project) return;
+    setRegeneratingScene(sceneNumber);
+    setAssetsError(null);
+    try {
+      const res = await fetch("/api/assets", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ project, sceneNumbers: [sceneNumber] }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error ?? "Scene regeneration failed.");
+      }
+      const updated = await res.json();
+      persist(updated);
+    } catch (err) {
+      setAssetsError(err instanceof Error ? err.message : "Something went wrong.");
+    } finally {
+      setRegeneratingScene(null);
     }
   }
 
@@ -218,9 +242,18 @@ export default function PreviewPage() {
                 <span className="text-sm font-semibold text-black dark:text-zinc-50">
                   Scene {scene.scene}
                 </span>
-                <span className="text-xs text-zinc-500">
-                  {scene.start} – {scene.end}
-                </span>
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-zinc-500">
+                    {scene.start} – {scene.end}
+                  </span>
+                  <button
+                    onClick={() => handleRegenerateScene(scene.scene)}
+                    disabled={regeneratingScene !== null}
+                    className="rounded-full border border-zinc-300 px-3 py-1 text-xs font-medium text-zinc-800 hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                  >
+                    {regeneratingScene === scene.scene ? "Regenerating..." : "Regenerate"}
+                  </button>
+                </div>
               </div>
 
               {(scene.imageUrl || scene.audioUrl) && (

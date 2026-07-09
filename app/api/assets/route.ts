@@ -7,7 +7,10 @@ import { generateSrt, generateVtt } from "@/lib/subtitles";
 import { GeneratedProject } from "@/types/project";
 
 export async function POST(request: NextRequest) {
-  const { project } = (await request.json()) as { project: GeneratedProject };
+  const { project, sceneNumbers } = (await request.json()) as {
+    project: GeneratedProject;
+    sceneNumbers?: number[];
+  };
 
   if (!project?.id || !project.scenes?.length) {
     return NextResponse.json({ error: "A valid project is required." }, { status: 400 });
@@ -20,9 +23,15 @@ export async function POST(request: NextRequest) {
   const dir = path.join(process.cwd(), "public", "generated", project.id);
   await fs.mkdir(dir, { recursive: true });
 
+  const targetSet = sceneNumbers ? new Set(sceneNumbers) : null;
+
   const scenes = await Promise.all(
     project.scenes.map(async (scene) => {
-      const result = { ...scene };
+      if (targetSet && !targetSet.has(scene.scene)) {
+        return scene;
+      }
+
+      const result = { ...scene, assetError: undefined };
       try {
         const imageBuffer = await generateSceneImage(scene.imagePrompt);
         const imageFile = `scene-${scene.scene}.png`;
