@@ -2,21 +2,30 @@ import fs from "fs/promises";
 import path from "path";
 import { GeneratedProject } from "@/types/project";
 import { parseTimeToSeconds } from "@/lib/sceneTiming";
-import { runFfmpeg } from "@/lib/ffmpegRunner";
+import { runFfmpeg, getMediaDuration } from "@/lib/ffmpegRunner";
 import { generateBackgroundMusic } from "@/lib/musicGen";
 
 export async function renderProject(project: GeneratedProject, dir: string): Promise<void> {
   const segmentFiles: string[] = [];
+  const segmentDurations: number[] = [];
 
   for (const scene of project.scenes) {
     if (!scene.audioUrl || (!scene.imageUrl && !scene.videoClipUrl)) {
       throw new Error(`Scene ${scene.scene} is missing generated visual or audio assets.`);
     }
 
-    const duration = Math.max(1, parseTimeToSeconds(scene.end) - parseTimeToSeconds(scene.start));
+    const slotDuration = Math.max(1, parseTimeToSeconds(scene.end) - parseTimeToSeconds(scene.start));
     const audioFile = `scene-${scene.scene}.wav`;
     const fixedAudioFile = `scene-${scene.scene}-fixed.wav`;
     const segmentFile = `segment-${scene.scene}.mp4`;
+
+    // Never cut the voiceover short: if it runs longer than the scene's
+    // planned slot, extend the segment to fit the whole line instead of
+    // trimming mid-sentence. Shorter voiceovers still get padded with
+    // silence up to the slot length.
+    const audioDuration = await getMediaDuration(audioFile, dir);
+    const duration = Math.max(slotDuration, audioDuration);
+    segmentDurations.push(duration);
 
     await runFfmpeg(
       ["-y", "-i", audioFile, "-af", "apad", "-t", String(duration), fixedAudioFile],
@@ -94,10 +103,7 @@ export async function renderProject(project: GeneratedProject, dir: string): Pro
     dir
   );
 
-  const totalDuration = project.scenes.reduce(
-    (sum, s) => sum + (parseTimeToSeconds(s.end) - parseTimeToSeconds(s.start)),
-    0
-  );
+  const totalDuration = segmentDurations.reduce((sum, d) => sum + d, 0);
   const hasMusic = await generateBackgroundMusic(
     dir,
     project.music.style,
@@ -132,26 +138,8 @@ export async function renderProject(project: GeneratedProject, dir: string): Pro
     videoWithAudio = "music-mixed.mp4";
   }
 
-  const hasSubtitles = await fs
-    .access(path.join(dir, "subtitles.srt"))
-    .then(() => true)
-    .catch(() => false);
-
-  if (hasSubtitles) {
-    await runFfmpeg(
-      [
-        "-y",
-        "-i",
-        videoWithAudio,
-        "-vf",
-        "subtitles=subtitles.srt:force_style='FontName=Arial,FontSize=22,PrimaryColour=&H00FFFFFF,OutlineColour=&H00000000,BorderStyle=1,Outline=2,Alignment=2,MarginV=80'",
-        "-c:a",
-        "copy",
-        "final.mp4",
-      ],
-      dir
-    );
-  } else {
-    await fs.copyFile(path.join(dir, videoWithAudio), path.join(dir, "final.mp4"));
-  }
+  // Subtitles are intentionally not burned into the video — SRT/VTT files
+  // remain available for download so the user can upload them separately
+  // (e.g. as YouTube captions) without permanent on-screen text.
+  await fs.copyFile(path.join(dir, videoWithAudio), path.join(dir, "final.mp4"));
 }
