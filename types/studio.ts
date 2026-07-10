@@ -40,6 +40,7 @@ export interface StudioScene {
   imageUrl?: string;
   videoClipUrl?: string;
   mediaType?: "image" | "video";
+  assetError?: string;
 }
 
 export type OutputTab =

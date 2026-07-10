@@ -45,6 +45,7 @@ function toStudioScenes(project: GeneratedProject | undefined): StudioScene[] {
     imageUrl: s.imageUrl,
     videoClipUrl: s.videoClipUrl,
     mediaType: s.mediaType,
+    assetError: s.assetError,
   }));
 }
 
@@ -283,6 +284,11 @@ export default function CreatePage() {
       }
       const updated = await res.json();
       updateProjectInState(updated);
+      
+      const sceneErr = updated.scenes.find((s: { scene: number }) => s.scene === sceneNumber)?.assetError;
+      if (sceneErr) {
+        throw new Error(sceneErr);
+      }
       
       // Update sibling projects if any
       if (updated.siblings && updated.siblings.length > 0) {
@@ -854,6 +860,11 @@ export default function CreatePage() {
                   const updatedBase = await res.json();
                   updateProjectInState(updatedBase);
                   setVoiceGenerated(true);
+                  
+                  const failed = updatedBase.scenes.filter((s: { assetError?: string }) => s.assetError);
+                  if (failed.length > 0) {
+                    throw new Error(`Failed to generate voiceover for ${failed.length} scene(s). Check scene messages below.`);
+                  }
                 } catch (err) {
                   setError(err instanceof Error ? err.message : "Error generating audio");
                 } finally {
@@ -913,6 +924,11 @@ export default function CreatePage() {
                     )}
                   </div>
                   <p className="text-[11px] text-slate-400 line-clamp-1 italic">"{scene.title}"</p>
+                  {scene.assetError && (
+                    <p className="text-[10px] text-red-400 font-semibold mt-1 border-t border-red-950/30 pt-1 leading-relaxed">
+                      {scene.assetError}
+                    </p>
+                  )}
                 </div>
               ))}
             </div>
