@@ -1,3 +1,5 @@
+import { fetchGeminiWithRetry } from "@/lib/gemini";
+
 const API_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
 const IMAGE_MODEL = "gemini-2.5-flash-image";
 
@@ -9,18 +11,10 @@ function getApiKey() {
 
 export async function generateSceneImage(prompt: string): Promise<Buffer> {
   const key = getApiKey();
-  const res = await fetch(`${API_BASE}/${IMAGE_MODEL}:generateContent?key=${key}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      contents: [{ parts: [{ text: `${prompt}. Vertical 9:16 aspect ratio.` }] }],
-    }),
+  const body = JSON.stringify({
+    contents: [{ parts: [{ text: `${prompt}. Vertical 9:16 aspect ratio.` }] }],
   });
-
-  if (!res.ok) {
-    const errText = await res.text();
-    throw new Error(`Gemini image API error (${res.status}): ${errText}`);
-  }
+  const res = await fetchGeminiWithRetry(`${API_BASE}/${IMAGE_MODEL}:generateContent?key=${key}`, body);
 
   const data = await res.json();
   const parts = data?.candidates?.[0]?.content?.parts ?? [];

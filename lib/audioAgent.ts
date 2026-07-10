@@ -1,4 +1,5 @@
 import { Voice } from "@/types/project";
+import { fetchGeminiWithRetry } from "@/lib/gemini";
 
 const API_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
 const TTS_MODEL = "gemini-2.5-flash-preview-tts";
@@ -42,24 +43,16 @@ export async function generateVoiceover(text: string, voice: Voice): Promise<Buf
   const key = getApiKey();
   const voiceName = VOICE_MAP[voice] ?? "Kore";
 
-  const res = await fetch(`${API_BASE}/${TTS_MODEL}:generateContent?key=${key}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      contents: [{ parts: [{ text }] }],
-      generationConfig: {
-        responseModalities: ["AUDIO"],
-        speechConfig: {
-          voiceConfig: { prebuiltVoiceConfig: { voiceName } },
-        },
+  const body = JSON.stringify({
+    contents: [{ parts: [{ text }] }],
+    generationConfig: {
+      responseModalities: ["AUDIO"],
+      speechConfig: {
+        voiceConfig: { prebuiltVoiceConfig: { voiceName } },
       },
-    }),
+    },
   });
-
-  if (!res.ok) {
-    const errText = await res.text();
-    throw new Error(`Gemini TTS API error (${res.status}): ${errText}`);
-  }
+  const res = await fetchGeminiWithRetry(`${API_BASE}/${TTS_MODEL}:generateContent?key=${key}`, body);
 
   const data = await res.json();
   const part = data?.candidates?.[0]?.content?.parts?.[0];
