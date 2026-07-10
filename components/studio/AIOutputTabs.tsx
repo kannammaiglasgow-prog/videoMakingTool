@@ -8,7 +8,7 @@ const TABS: OutputTab[] = [
   "AI Plan",
   "Script",
   "Scenes",
-  "Images",
+  "Videos",
   "Voice",
   "Subtitles",
   "Timeline",
@@ -108,15 +108,17 @@ export default function AIOutputTabs(props: AIOutputTabsProps) {
           </div>
         )}
 
-        {activeTab === "Images" && (
+        {activeTab === "Videos" && (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             {scenes.length === 0 && (
-              <p className="col-span-full text-sm text-slate-500">No images generated yet.</p>
+              <p className="col-span-full text-sm text-slate-500">No videos or images generated yet.</p>
             )}
             {scenes.map((scene) => (
               <div key={scene.id} className="flex flex-col gap-1">
                 <div className="flex aspect-[9/16] items-center justify-center overflow-hidden rounded-lg bg-slate-800 text-3xl">
-                  {scene.imageUrl ? (
+                  {scene.mediaType === "video" && scene.videoClipUrl ? (
+                    <video src={scene.videoClipUrl} controls muted className="h-full w-full object-cover" />
+                  ) : scene.imageUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={scene.imageUrl} alt={scene.title} className="h-full w-full object-cover" />
                   ) : (

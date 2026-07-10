@@ -38,13 +38,15 @@ export interface StudioScene {
   description: string;
   thumbnail: string;
   imageUrl?: string;
+  videoClipUrl?: string;
+  mediaType?: "image" | "video";
 }
 
 export type OutputTab =
   | "AI Plan"
   | "Script"
   | "Scenes"
-  | "Images"
+  | "Videos"
   | "Voice"
   | "Subtitles"
   | "Timeline";

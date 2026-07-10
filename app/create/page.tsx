@@ -30,6 +30,8 @@ function toStudioScenes(project: GeneratedProject | undefined): StudioScene[] {
     description: s.visual,
     thumbnail: "🎬",
     imageUrl: s.imageUrl,
+    videoClipUrl: s.videoClipUrl,
+    mediaType: s.mediaType,
   }));
 }
 
