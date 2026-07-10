@@ -21,6 +21,8 @@ export default function PreviewPage() {
   const [editing, setEditing] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
   const [pixabayQueries, setPixabayQueries] = useState<Record<number, string>>({});
+  const [batchProvider, setBatchProvider] = useState<"pixabay" | "pexels" | null>(null);
+  const [batchProgress, setBatchProgress] = useState<{ done: number; total: number } | null>(null);
 
   useEffect(() => {
     const raw = localStorage.getItem(`project:${params.id}`);
@@ -207,6 +209,64 @@ export default function PreviewPage() {
     }
   }
 
+  async function handleApplyStockVideoToAll(provider: "pixabay" | "pexels") {
+    if (!project) return;
+    setBatchProvider(provider);
+    setAssetsError(null);
+
+    let current = project;
+    const total = current.scenes.length;
+    const endpoint = provider === "pixabay" ? "/api/assets/pixabay-video" : "/api/assets/pexels-video";
+
+    for (let i = 0; i < total; i++) {
+      const scene = current.scenes[i];
+      setBatchProgress({ done: i, total });
+      const query = (pixabayQueries[scene.scene] ?? defaultPixabayQuery(scene.imagePrompt)).trim();
+      if (!query) continue;
+
+      try {
+        const res = await fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ projectId: current.id, sceneNumber: scene.scene, query }),
+        });
+        if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.error ?? "Stock video search failed.");
+        }
+        const { videoClipUrl, credit } = await res.json();
+        const scenes = current.scenes.map((s) =>
+          s.scene === scene.scene
+            ? {
+                ...s,
+                mediaType: "video" as const,
+                videoClipUrl: `${videoClipUrl}?t=${Date.now()}`,
+                videoClipCredit: credit,
+                assetError: undefined,
+              }
+            : s
+        );
+        current = { ...current, scenes, assetsGenerated: true };
+        const updatedScene = scenes.find((s) => s.scene === scene.scene);
+        if (!updatedScene?.audioUrl) {
+          current = await ensureVoiceover(current, scene.scene);
+        }
+        persist(current);
+      } catch (err) {
+        const scenes = current.scenes.map((s) =>
+          s.scene === scene.scene
+            ? { ...s, assetError: err instanceof Error ? err.message : "Something went wrong." }
+            : s
+        );
+        current = { ...current, scenes };
+        persist(current);
+      }
+    }
+
+    setBatchProgress({ done: total, total });
+    setBatchProvider(null);
+  }
+
   async function handleSaveProject() {
     if (!project) return;
     setSaveStatus("saving");
@@ -349,6 +409,27 @@ export default function PreviewPage() {
             </button>
           )}
         </div>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            onClick={() => handleApplyStockVideoToAll("pixabay")}
+            disabled={regeneratingScene !== null || batchProvider !== null}
+            className="rounded-full border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-800 hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
+          >
+            {batchProvider === "pixabay"
+              ? `Applying Pixabay... (${batchProgress?.done ?? 0}/${batchProgress?.total ?? project.scenes.length})`
+              : "Use Pixabay video for all scenes"}
+          </button>
+          <button
+            onClick={() => handleApplyStockVideoToAll("pexels")}
+            disabled={regeneratingScene !== null || batchProvider !== null}
+            className="rounded-full border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-800 hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
+          >
+            {batchProvider === "pexels"
+              ? `Applying Pexels... (${batchProgress?.done ?? 0}/${batchProgress?.total ?? project.scenes.length})`
+              : "Use Pexels video for all scenes"}
+          </button>
+        </div>
         {assetsError && <p className="text-sm text-red-600">{assetsError}</p>}
 
         <section className="flex flex-col gap-4">
@@ -370,14 +451,14 @@ export default function PreviewPage() {
                   </span>
                   <button
                     onClick={() => handleRegenerateScene(scene.scene)}
-                    disabled={regeneratingScene !== null}
+                    disabled={regeneratingScene !== null || batchProvider !== null}
                     className="rounded-full border border-zinc-300 px-3 py-1 text-xs font-medium text-zinc-800 hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
                   >
                     {regeneratingScene === scene.scene ? "Working..." : "Regenerate"}
                   </button>
                   <button
                     onClick={() => handleGenerateVoiceover(scene.scene)}
-                    disabled={regeneratingScene !== null}
+                    disabled={regeneratingScene !== null || batchProvider !== null}
                     className="rounded-full border border-zinc-300 px-3 py-1 text-xs font-medium text-zinc-800 hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
                   >
                     {regeneratingScene === scene.scene
@@ -392,7 +473,7 @@ export default function PreviewPage() {
                       type="file"
                       accept="image/*"
                       className="hidden"
-                      disabled={regeneratingScene !== null}
+                      disabled={regeneratingScene !== null || batchProvider !== null}
                       onChange={(e) => {
                         const file = e.target.files?.[0];
                         if (file) handleUploadImage(scene.scene, file);
@@ -417,7 +498,7 @@ export default function PreviewPage() {
                   onClick={() =>
                     handleStockVideoSearch("pixabay", scene.scene, defaultPixabayQuery(scene.imagePrompt))
                   }
-                  disabled={regeneratingScene !== null}
+                  disabled={regeneratingScene !== null || batchProvider !== null}
                   className="whitespace-nowrap rounded-full border border-zinc-300 px-3 py-1 text-xs font-medium text-zinc-800 hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
                 >
                   {regeneratingScene === scene.scene ? "Searching..." : "Use Pixabay video"}
@@ -426,7 +507,7 @@ export default function PreviewPage() {
                   onClick={() =>
                     handleStockVideoSearch("pexels", scene.scene, defaultPixabayQuery(scene.imagePrompt))
                   }
-                  disabled={regeneratingScene !== null}
+                  disabled={regeneratingScene !== null || batchProvider !== null}
                   className="whitespace-nowrap rounded-full border border-zinc-300 px-3 py-1 text-xs font-medium text-zinc-800 hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
                 >
                   {regeneratingScene === scene.scene ? "Searching..." : "Use Pexels video"}
