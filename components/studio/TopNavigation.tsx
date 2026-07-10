@@ -2,7 +2,17 @@
 
 import { Bell, Check, Clapperboard } from "lucide-react";
 
-const STEPS = ["Create", "AI Plan", "Assets", "Edit", "Export"];
+const STEPS = [
+  "Input",
+  "AI Plan",
+  "Assets",
+  "Timeline",
+  "Voice & Sub",
+  "Preview",
+  "Render",
+  "Rendering",
+  "Export",
+];
 
 export default function TopNavigation({ activeStep = 0 }: { activeStep?: number }) {
   return (

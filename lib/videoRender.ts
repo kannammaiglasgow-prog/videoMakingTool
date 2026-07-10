@@ -10,8 +10,8 @@ export async function renderProject(project: GeneratedProject, dir: string): Pro
   const segmentDurations: number[] = [];
 
   for (const scene of project.scenes) {
-    if (!scene.audioUrl || (!scene.imageUrl && !scene.videoClipUrl)) {
-      throw new Error(`Scene ${scene.scene} is missing generated visual or audio assets.`);
+    if (!scene.audioUrl) {
+      throw new Error(`Scene ${scene.scene} is missing generated audio assets.`);
     }
 
     const slotDuration = Math.max(1, parseTimeToSeconds(scene.end) - parseTimeToSeconds(scene.start));
@@ -33,6 +33,7 @@ export async function renderProject(project: GeneratedProject, dir: string): Pro
     );
 
     const useVideoClip = scene.mediaType === "video" && scene.videoClipUrl;
+    const hasImage = !useVideoClip && scene.imageUrl;
 
     if (useVideoClip) {
       const clipFile = `scene-${scene.scene}-clip.mp4`;
@@ -63,7 +64,7 @@ export async function renderProject(project: GeneratedProject, dir: string): Pro
         ],
         dir
       );
-    } else {
+    } else if (hasImage) {
       const imageFile = `scene-${scene.scene}.png`;
       await runFfmpeg(
         [
@@ -76,6 +77,32 @@ export async function renderProject(project: GeneratedProject, dir: string): Pro
           fixedAudioFile,
           "-vf",
           "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,fps=30",
+          "-c:v",
+          "libx264",
+          "-pix_fmt",
+          "yuv420p",
+          "-c:a",
+          "aac",
+          "-t",
+          String(duration),
+          "-shortest",
+          segmentFile,
+        ],
+        dir
+      );
+    } else {
+      // Fallback: Generate a solid deep purple background using lavfi color source
+      await runFfmpeg(
+        [
+          "-y",
+          "-f",
+          "lavfi",
+          "-i",
+          "color=c=0x1b1931:s=1080x1920",
+          "-i",
+          fixedAudioFile,
+          "-vf",
+          "fps=30",
           "-c:v",
           "libx264",
           "-pix_fmt",
