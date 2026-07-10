@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { generateScriptAndScenes } from "@/lib/scriptAgent";
 import { translateProject } from "@/lib/translateAgent";
 import { mockGenerateProject } from "@/lib/mockAi";
-import { generateProjectAssets, copySceneVisuals } from "@/lib/assetGeneration";
 import { GenerateInput, GeneratedProject, Language } from "@/types/project";
 
 export async function POST(request: NextRequest) {
@@ -36,17 +35,15 @@ export async function POST(request: NextRequest) {
       (err instanceof Error ? err.message : "Unknown error.");
   }
 
-  // Images/video are generated once on the base-language project and reused
-  // across every other language to avoid paying for them N times.
-  base = await generateProjectAssets(base);
-
+  // Script/scenes only here — no images, video, or voiceover yet. Assets are
+  // generated later (once, on whichever language the user opens first) via
+  // the preview page's "Generate images & voiceover" button, which then
+  // propagates the same images/video to every sibling language.
   const projects: GeneratedProject[] = [base];
 
   for (const lang of otherLanguages) {
     try {
-      let translated = await translateProject(base, lang);
-      translated = await copySceneVisuals(base, translated);
-      translated = await generateProjectAssets(translated, { assetTypes: ["audio"] });
+      const translated = await translateProject(base, lang);
       projects.push(translated);
     } catch (err) {
       console.error(`Translation to ${lang} failed:`, err);

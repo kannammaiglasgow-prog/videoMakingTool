@@ -52,17 +52,47 @@ export default function PreviewPage() {
     setGeneratingAssets(true);
     setAssetsError(null);
     try {
-      const res = await fetch("/api/assets", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ project }),
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error ?? "Asset generation failed.");
+      if (project.siblings && project.siblings.length > 0) {
+        // Multi-language project: generate images/video once on this
+        // language, then copy them into every sibling language and
+        // generate each sibling's own voiceover.
+        const siblingProjects = project.siblings
+          .map((s) => {
+            const raw = localStorage.getItem(`project:${s.id}`);
+            return raw ? (JSON.parse(raw) as GeneratedProject) : null;
+          })
+          .filter((p): p is GeneratedProject => p !== null);
+
+        const res = await fetch("/api/assets/propagate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ baseProject: project, siblingProjects }),
+        });
+        if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.error ?? "Asset generation failed.");
+        }
+        const { base, siblings } = (await res.json()) as {
+          base: GeneratedProject;
+          siblings: GeneratedProject[];
+        };
+        for (const sibling of siblings) {
+          localStorage.setItem(`project:${sibling.id}`, JSON.stringify(sibling));
+        }
+        persist(base);
+      } else {
+        const res = await fetch("/api/assets", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ project }),
+        });
+        if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.error ?? "Asset generation failed.");
+        }
+        const updated = await res.json();
+        persist(updated);
       }
-      const updated = await res.json();
-      persist(updated);
     } catch (err) {
       setAssetsError(err instanceof Error ? err.message : "Something went wrong.");
     } finally {
