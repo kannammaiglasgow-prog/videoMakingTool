@@ -83,6 +83,14 @@ export default function CreatePage() {
   const [renderProgress, setRenderProgress] = useState(0);
   const [renderStatusMessage, setRenderStatusMessage] = useState("");
 
+  // Video Search Selector Modal States
+  const [showVideoSelector, setShowVideoSelector] = useState(false);
+  const [selectorSceneNumber, setSelectorSceneNumber] = useState<number | null>(null);
+  const [videoSearchQuery, setVideoSearchQuery] = useState("");
+  const [videoSearchResults, setVideoSearchResults] = useState<any[]>([]);
+  const [searchingVideos, setSearchingVideos] = useState(false);
+  const [downloadingSelectedVideoId, setDownloadingSelectedVideoId] = useState<number | null>(null);
+
   function updateSetting<K extends keyof ProjectSettings>(key: K, value: ProjectSettings[K]) {
     setSettings((prev) => ({ ...prev, [key]: value }));
   }
@@ -228,6 +236,76 @@ export default function CreatePage() {
       updateProjectInState(updated);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
+    }
+  }
+
+  function openVideoSelector(sceneNumber: number, visualDescription: string) {
+    setSelectorSceneNumber(sceneNumber);
+    const query = defaultPixabayQuery(visualDescription);
+    setVideoSearchQuery(query);
+    setShowVideoSelector(true);
+    handleSearchVideos(query);
+  }
+
+  async function handleSearchVideos(query: string) {
+    setSearchingVideos(true);
+    setVideoSearchResults([]);
+    try {
+      const res = await fetch("/api/assets/search-videos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query }),
+      });
+      if (!res.ok) throw new Error("வீடியோ தேடல் தோல்வியடைந்தது.");
+      const data = await res.json();
+      setVideoSearchResults(data.results || []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Search failed.");
+    } finally {
+      setSearchingVideos(false);
+    }
+  }
+
+  async function handleSelectVideo(video: any) {
+    if (projects.length === 0 || selectorSceneNumber === null) return;
+    const project = projects[0];
+    setDownloadingSelectedVideoId(video.id);
+    try {
+      const res = await fetch("/api/assets/download-selected-video", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          projectId: project.id,
+          sceneNumber: selectorSceneNumber,
+          downloadUrl: video.downloadUrl,
+          credit: `Video by ${video.user} on Pexels (${video.url})`,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error ?? "வீடியோவைப் பதிவிறக்குவதில் தோல்வி.");
+      }
+      const { videoClipUrl, credit } = await res.json();
+      
+      const scenes = project.scenes.map((s) =>
+        s.scene === selectorSceneNumber
+          ? {
+              ...s,
+              mediaType: "video" as const,
+              videoClipUrl: `${videoClipUrl}?t=${Date.now()}`,
+              videoClipCredit: credit,
+              imageUrl: undefined,
+              assetError: undefined,
+            }
+          : s
+      );
+      
+      updateProjectInState({ ...project, scenes, assetsGenerated: true });
+      setShowVideoSelector(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Setting video failed.");
+    } finally {
+      setDownloadingSelectedVideoId(null);
     }
   }
 
@@ -740,11 +818,11 @@ export default function CreatePage() {
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleStockVideoSearchLocal(scene.id, scene.description, "pexels");
+                              openVideoSelector(scene.id, scene.description);
                             }}
                             className="py-1 text-[11px] font-bold text-center border border-slate-700 rounded hover:bg-slate-800 transition-colors"
                           >
-                            Find Video
+                            மாற்று வீடியோ
                           </button>
                           <label className="py-1 text-[11px] font-bold text-center border border-slate-700 rounded hover:bg-slate-800 transition-colors cursor-pointer">
                             Upload
@@ -1212,6 +1290,91 @@ export default function CreatePage() {
                 Create Another Video ✨
               </button>
             )}
+          </div>
+        </div>
+      )}
+
+      {showVideoSelector && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="w-full max-w-4xl bg-slate-900 border border-slate-800 rounded-2xl flex flex-col max-h-[85vh] overflow-hidden shadow-2xl">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800">
+              <h3 className="text-sm font-bold text-purple-400">மாற்று வீடியோவைத் தேர்ந்தெடுங்கள் (Scene {selectorSceneNumber})</h3>
+              <button
+                onClick={() => setShowVideoSelector(false)}
+                className="text-slate-400 hover:text-white text-xs font-semibold px-2 py-1 rounded hover:bg-slate-800"
+              >
+                மூடு ✕
+              </button>
+            </div>
+
+            {/* Search Input Bar */}
+            <div className="p-4 bg-slate-950/40 border-b border-slate-800 flex gap-2">
+              <input
+                type="text"
+                value={videoSearchQuery}
+                onChange={(e) => setVideoSearchQuery(e.target.value)}
+                className="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-purple-500"
+                placeholder="வீடியோக்களைத் தேட தட்டச்சு செய்யவும்... (எ.கா: ocean, jungle, technology)"
+              />
+              <button
+                onClick={() => handleSearchVideos(videoSearchQuery)}
+                disabled={searchingVideos}
+                className="px-4 py-2 bg-purple-650 hover:bg-purple-600 disabled:bg-slate-800 text-white font-bold rounded-lg text-xs transition-colors"
+              >
+                {searchingVideos ? "தேடுகிறது..." : "தேடு"}
+              </button>
+            </div>
+
+            {/* Results Grid */}
+            <div className="flex-1 overflow-y-auto p-6">
+              {searchingVideos ? (
+                <div className="flex flex-col items-center justify-center py-12 gap-3 text-slate-400">
+                  <div className="w-8 h-8 rounded-full border-2 border-purple-500 border-t-transparent animate-spin" />
+                  <p className="text-xs">பொருத்தமான வீடியோக்களைத் தேடுகிறது...</p>
+                </div>
+              ) : videoSearchResults.length === 0 ? (
+                <div className="text-center py-12 text-slate-400 text-xs">
+                  முடிவுகள் எதுவும் இல்லை. வேறு வார்த்தைகளைப் பயன்படுத்தித் தேடவும்.
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                  {videoSearchResults.map((video) => {
+                    const isDownloading = downloadingSelectedVideoId === video.id;
+                    return (
+                      <div key={video.id} className="bg-slate-950 border border-slate-850 rounded-xl overflow-hidden flex flex-col gap-2 p-2 group transition-all hover:border-purple-900/60">
+                        {/* Video Preview Element */}
+                        <div className="relative aspect-[9/16] bg-black rounded-lg overflow-hidden flex-shrink-0">
+                          <video
+                            src={video.previewUrl}
+                            poster={video.image}
+                            controls
+                            muted
+                            loop
+                            playsInline
+                            className="w-full h-full object-cover"
+                          />
+                          <span className="absolute bottom-1.5 right-1.5 bg-black/60 px-1 py-0.5 rounded text-[9px] text-slate-300 font-semibold">
+                            {video.duration}s
+                          </span>
+                        </div>
+                        
+                        <div className="flex-1 flex flex-col justify-between gap-2">
+                          <p className="text-[10px] text-slate-400 truncate">ஆசிரியர்: {video.user}</p>
+                          <button
+                            onClick={() => handleSelectVideo(video)}
+                            disabled={downloadingSelectedVideoId !== null}
+                            className="w-full py-1.5 bg-purple-650 hover:bg-purple-600 disabled:bg-slate-850 disabled:text-slate-500 font-bold rounded-lg text-[10px] text-white transition-colors"
+                          >
+                            {isDownloading ? "பதிவிறக்குகிறது..." : "தேர்ந்தெடு"}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
