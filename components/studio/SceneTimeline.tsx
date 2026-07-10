@@ -12,6 +12,8 @@ interface SceneTimelineProps {
   totalDuration: number;
   onNextStep?: () => void;
   nextDisabled?: boolean;
+  onPreviewVideo?: () => void;
+  previewDisabled?: boolean;
 }
 
 export default function SceneTimeline({
@@ -19,6 +21,8 @@ export default function SceneTimeline({
   totalDuration,
   onNextStep,
   nextDisabled,
+  onPreviewVideo,
+  previewDisabled,
 }: SceneTimelineProps) {
   const [activeScene, setActiveScene] = useState(1);
 
@@ -56,7 +60,11 @@ export default function SceneTimeline({
           and subtitles change.
         </p>
         <div className="flex gap-3">
-          <SecondaryButton className="py-2 text-xs">
+          <SecondaryButton
+            onClick={onPreviewVideo}
+            disabled={previewDisabled}
+            className="py-2 text-xs"
+          >
             <PlayCircle className="h-3.5 w-3.5" /> Preview Master Video
           </SecondaryButton>
           <PrimaryButton onClick={onNextStep} disabled={nextDisabled} className="py-2 text-xs">

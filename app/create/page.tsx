@@ -317,6 +317,12 @@ export default function CreatePage() {
           }
         }}
         nextDisabled={!primaryProject}
+        onPreviewVideo={() => {
+          if (primaryProject?.videoUrl) {
+            window.open(primaryProject.videoUrl, "_blank");
+          }
+        }}
+        previewDisabled={!primaryProject?.videoUrl}
       />
     </div>
   );
