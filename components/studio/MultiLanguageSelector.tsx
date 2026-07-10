@@ -1,11 +1,12 @@
 "use client";
 
+import { Language } from "@/types/project";
 import { LanguageOption } from "@/types/studio";
 import CheckboxField from "@/components/studio/ui/CheckboxField";
 
 interface MultiLanguageSelectorProps {
   languages: LanguageOption[];
-  onToggle: (code: string) => void;
+  onToggle: (code: Language) => void;
   onSelectAll: () => void;
   onClearAll: () => void;
   keepSameVoice: boolean;

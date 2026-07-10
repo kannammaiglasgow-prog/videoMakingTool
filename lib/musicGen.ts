@@ -7,21 +7,22 @@ interface MusicRecipe {
   vibrato?: string;
 }
 
-const RECIPES: Record<Exclude<MusicStyle, "Auto" | "No music">, MusicRecipe> = {
+const RECIPES: Record<Exclude<MusicStyle, "Auto" | "No Music">, MusicRecipe> = {
   Emotional: { frequencies: [220, 277.18, 329.63] },
   Funny: { frequencies: [392, 523.25], tremolo: "tremolo=f=6:d=0.5" },
   Suspense: { frequencies: [55, 82.41], tremolo: "tremolo=f=3:d=0.7" },
+  Epic: { frequencies: [98, 130.81, 164.81, 196.0], tremolo: "tremolo=f=1.5:d=0.4" },
   News: { frequencies: [261.63, 329.63], tremolo: "tremolo=f=2:d=0.3" },
   Cinematic: { frequencies: [130.81, 164.81, 196.0, 261.63] },
 };
 
-function resolveStyle(style: MusicStyle, tone: string): Exclude<MusicStyle, "Auto" | "No music"> {
-  if (style !== "Auto") return style as Exclude<MusicStyle, "Auto" | "No music">;
+function resolveStyle(style: MusicStyle, tone: string): Exclude<MusicStyle, "Auto" | "No Music"> {
+  if (style !== "Auto") return style as Exclude<MusicStyle, "Auto" | "No Music">;
   const t = tone.toLowerCase();
   if (t.includes("funny")) return "Funny";
   if (t.includes("emotional") || t.includes("supportive")) return "Emotional";
-  if (t.includes("serious") || t.includes("documentary") || t.includes("against")) return "News";
-  if (t.includes("motivational")) return "Cinematic";
+  if (t.includes("serious") || t.includes("documentary") || t.includes("opposing")) return "News";
+  if (t.includes("exciting")) return "Epic";
   return "Cinematic";
 }
 
@@ -38,7 +39,7 @@ export async function generateBackgroundMusic(
   volume: "low" | "medium" | "high",
   duration: number
 ): Promise<boolean> {
-  if (style === "No music") return false;
+  if (style === "No Music") return false;
 
   const recipe = RECIPES[resolveStyle(style, tone)];
   const gain = VOLUME_GAIN[volume] ?? 0.15;

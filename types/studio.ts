@@ -1,52 +1,43 @@
+import { Language } from "@/types/project";
+
 export interface LanguageOption {
-  code: string;
-  name: string;
+  code: Language;
+  name: Language;
   nativeName: string;
   flag: string;
   selected: boolean;
 }
 
-export type LanguageExportStatus =
+export type StudioStatus =
   | "queued"
   | "translating"
   | "generating-voice"
-  | "generating-subtitles"
   | "rendering"
   | "completed"
   | "failed";
 
-export interface LanguageExport {
-  languageCode: string;
-  languageName: string;
+export interface LanguageExportRow {
+  projectId: string;
+  languageCode: Language;
+  languageName: Language;
   nativeName: string;
   flag: string;
   voiceName: string;
-  status: LanguageExportStatus;
+  status: StudioStatus;
   progress: number;
   previewUrl?: string;
   downloadUrl?: string;
+  errorMessage?: string;
 }
 
-export interface Scene {
+export interface StudioScene {
   id: number;
   startTime: string;
   endTime: string;
   title: string;
   description: string;
   thumbnail: string;
-}
-
-export interface VideoSettingsState {
-  videoLength: string;
-  language: string;
-  aspectRatio: string;
-  platform: string;
-  targetAudience: string;
-  tone: string;
-  videoStyle: string;
-  voiceStyle: string;
-  musicStyle: string;
-  visualStyle: string;
+  imageUrl?: string;
 }
 
 export type OutputTab =

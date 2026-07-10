@@ -1,17 +1,26 @@
 "use client";
 
 import { AlertTriangle, CheckCircle2, Download, Play } from "lucide-react";
-import { LanguageExport } from "@/types/studio";
+import { LanguageExportRow } from "@/types/studio";
 import ProgressBar from "@/components/studio/ui/ProgressBar";
 
 interface LanguageStatusRowProps {
-  entry: LanguageExport;
-  onRetry: (languageCode: string) => void;
+  entry: LanguageExportRow;
+  onRetry: (projectId: string) => void;
 }
 
+const STATUS_LABEL: Record<LanguageExportRow["status"], string> = {
+  queued: "Queued",
+  translating: "Translating...",
+  "generating-voice": "Generating Voice...",
+  rendering: "Rendering",
+  completed: "Completed",
+  failed: "Failed",
+};
+
 export default function LanguageStatusRow({ entry, onRetry }: LanguageStatusRowProps) {
-  const canPreview = entry.status === "completed" || entry.status === "rendering";
-  const canDownload = entry.status === "completed";
+  const canPreview = Boolean(entry.previewUrl);
+  const canDownload = entry.status === "completed" && Boolean(entry.downloadUrl);
 
   return (
     <tr className="border-b border-slate-800 last:border-0">
@@ -30,19 +39,16 @@ export default function LanguageStatusRow({ entry, onRetry }: LanguageStatusRowP
         )}
         {entry.status === "rendering" && (
           <div className="flex flex-col gap-1">
-            <span className="text-xs font-medium text-purple-300">Rendering {entry.progress}%</span>
+            <span className="text-xs font-medium text-purple-300">
+              {STATUS_LABEL.rendering} {entry.progress}%
+            </span>
             <ProgressBar progress={entry.progress} />
           </div>
         )}
-        {entry.status === "queued" && <span className="text-xs text-slate-500">Queued</span>}
-        {entry.status === "translating" && (
-          <span className="text-xs font-medium text-purple-300">Translating...</span>
-        )}
-        {entry.status === "generating-voice" && (
-          <span className="text-xs font-medium text-purple-300">Generating Voice...</span>
-        )}
-        {entry.status === "generating-subtitles" && (
-          <span className="text-xs font-medium text-purple-300">Generating Subtitles...</span>
+        {(entry.status === "queued" ||
+          entry.status === "translating" ||
+          entry.status === "generating-voice") && (
+          <span className="text-xs font-medium text-slate-400">{STATUS_LABEL[entry.status]}</span>
         )}
         {entry.status === "failed" && (
           <div className="flex items-center gap-2">
@@ -50,8 +56,9 @@ export default function LanguageStatusRow({ entry, onRetry }: LanguageStatusRowP
               <AlertTriangle className="h-3.5 w-3.5" /> Failed
             </span>
             <button
-              onClick={() => onRetry(entry.languageCode)}
+              onClick={() => onRetry(entry.projectId)}
               className="rounded-full border border-red-800 px-2 py-0.5 text-[11px] font-medium text-red-300 hover:bg-red-950"
+              title={entry.errorMessage}
             >
               Retry
             </button>
@@ -61,18 +68,23 @@ export default function LanguageStatusRow({ entry, onRetry }: LanguageStatusRowP
       <td className="py-3 pr-3">
         <button
           disabled={!canPreview}
+          onClick={() => entry.previewUrl && window.open(entry.previewUrl, "_blank")}
           className="flex h-7 w-7 items-center justify-center rounded-full bg-purple-600 text-white disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-600"
         >
           <Play className="ml-0.5 h-3 w-3" />
         </button>
       </td>
       <td className="py-3">
-        <button
-          disabled={!canDownload}
-          className="flex h-7 w-7 items-center justify-center rounded-full border border-slate-700 text-slate-300 disabled:cursor-not-allowed disabled:opacity-40"
+        <a
+          href={canDownload ? entry.downloadUrl : undefined}
+          download
+          className={
+            "flex h-7 w-7 items-center justify-center rounded-full border border-slate-700 text-slate-300 " +
+            (canDownload ? "" : "pointer-events-none opacity-40")
+          }
         >
           <Download className="h-3.5 w-3.5" />
-        </button>
+        </a>
       </td>
     </tr>
   );

@@ -15,10 +15,12 @@ const LANGUAGE_CODES: Record<Language, string> = {
 };
 
 const VOICE_GENDER: Record<Voice, "MALE" | "FEMALE" | "NEUTRAL"> = {
-  Male: "MALE",
-  Female: "FEMALE",
-  "News reader": "MALE",
-  Narrator: "NEUTRAL",
+  "Male News Reader": "MALE",
+  "Female News Reader": "FEMALE",
+  "Male Narrator": "MALE",
+  "Female Narrator": "FEMALE",
+  "Calm Voice": "FEMALE",
+  "Energetic Voice": "MALE",
 };
 
 let client: InstanceType<typeof textToSpeech.TextToSpeechClient> | null = null;

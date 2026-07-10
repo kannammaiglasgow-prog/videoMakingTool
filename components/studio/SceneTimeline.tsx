@@ -2,17 +2,24 @@
 
 import { useState } from "react";
 import { ArrowRight, Edit3, PlayCircle } from "lucide-react";
-import { Scene } from "@/types/studio";
+import { StudioScene } from "@/types/studio";
 import SceneCard from "@/components/studio/SceneCard";
 import SecondaryButton from "@/components/studio/ui/SecondaryButton";
 import PrimaryButton from "@/components/studio/ui/PrimaryButton";
 
 interface SceneTimelineProps {
-  scenes: Scene[];
+  scenes: StudioScene[];
   totalDuration: number;
+  onNextStep?: () => void;
+  nextDisabled?: boolean;
 }
 
-export default function SceneTimeline({ scenes, totalDuration }: SceneTimelineProps) {
+export default function SceneTimeline({
+  scenes,
+  totalDuration,
+  onNextStep,
+  nextDisabled,
+}: SceneTimelineProps) {
   const [activeScene, setActiveScene] = useState(1);
 
   return (
@@ -52,7 +59,7 @@ export default function SceneTimeline({ scenes, totalDuration }: SceneTimelinePr
           <SecondaryButton className="py-2 text-xs">
             <PlayCircle className="h-3.5 w-3.5" /> Preview Master Video
           </SecondaryButton>
-          <PrimaryButton className="py-2 text-xs">
+          <PrimaryButton onClick={onNextStep} disabled={nextDisabled} className="py-2 text-xs">
             Next: Assets <ArrowRight className="h-3.5 w-3.5" />
           </PrimaryButton>
         </div>

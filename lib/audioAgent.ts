@@ -6,10 +6,12 @@ const API_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
 const TTS_MODEL = "gemini-2.5-flash-preview-tts";
 
 const VOICE_MAP: Record<Voice, string> = {
-  Male: "Puck",
-  Female: "Kore",
-  "News reader": "Charon",
-  Narrator: "Fenrir",
+  "Male News Reader": "Charon",
+  "Female News Reader": "Kore",
+  "Male Narrator": "Fenrir",
+  "Female Narrator": "Aoede",
+  "Calm Voice": "Leda",
+  "Energetic Voice": "Puck",
 };
 
 function getApiKey() {

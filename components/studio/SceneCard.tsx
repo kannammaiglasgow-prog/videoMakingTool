@@ -1,7 +1,7 @@
-import { Scene } from "@/types/studio";
+import { StudioScene } from "@/types/studio";
 
 interface SceneCardProps {
-  scene: Scene;
+  scene: StudioScene;
   active?: boolean;
   onClick?: () => void;
 }
@@ -25,8 +25,13 @@ export default function SceneCard({ scene, active, onClick }: SceneCardProps) {
           {scene.startTime} - {scene.endTime}
         </span>
       </div>
-      <div className="flex h-16 items-center justify-center rounded-lg bg-slate-800 text-2xl">
-        {scene.thumbnail}
+      <div className="flex h-16 items-center justify-center overflow-hidden rounded-lg bg-slate-800 text-2xl">
+        {scene.imageUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={scene.imageUrl} alt={scene.title} className="h-full w-full object-cover" />
+        ) : (
+          scene.thumbnail
+        )}
       </div>
       <p className="text-xs font-semibold text-slate-100">{scene.title}</p>
       <p className="text-[11px] leading-snug text-slate-500">{scene.description}</p>

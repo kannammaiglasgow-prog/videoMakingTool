@@ -13,50 +13,53 @@ export type Language =
   | "Spanish";
 
 export type Audience =
-  | "General public"
+  | "General Public"
   | "Students"
   | "Parents"
   | "Professionals"
-  | "Kids";
+  | "Kids"
+  | "Social Media Audience";
 
 export type Tone =
   | "Neutral"
   | "Supportive"
-  | "Against"
-  | "Funny"
+  | "Opposing"
   | "Serious"
+  | "Exciting"
+  | "Funny"
   | "Emotional"
-  | "Motivational"
   | "Documentary";
 
 export type Style =
-  | "Breaking news"
+  | "Breaking News"
   | "Storytelling"
+  | "Documentary"
   | "Comedy"
   | "Educational"
   | "Cinematic"
-  | "Documentary";
+  | "Social Commentary";
 
-export type Voice = "Male" | "Female" | "News reader" | "Narrator";
+export type Voice =
+  | "Male News Reader"
+  | "Female News Reader"
+  | "Male Narrator"
+  | "Female Narrator"
+  | "Calm Voice"
+  | "Energetic Voice";
 
 export type MusicStyle =
   | "Auto"
-  | "No music"
+  | "No Music"
+  | "Suspense"
+  | "Epic"
+  | "News"
   | "Emotional"
   | "Funny"
-  | "Suspense"
-  | "News"
   | "Cinematic";
 
-export type VisualStyle =
-  | "Realistic"
-  | "AI art"
-  | "3D"
-  | "Documentary"
-  | "Cinematic"
-  | "Cartoon";
+export type VisualStyle = "Realistic" | "Cinematic" | "Documentary" | "AI Art" | "3D" | "Cartoon";
 
-export type Platform = "YouTube Shorts" | "YouTube Video" | "Instagram Reel" | "TikTok";
+export type Platform = "YouTube Shorts" | "Instagram Reels" | "TikTok" | "Facebook Reels";
 
 export interface ProjectSettings {
   duration: VideoLength;
