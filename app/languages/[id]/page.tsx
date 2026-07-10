@@ -217,7 +217,7 @@ export default function LanguagesPage() {
             disabled={busyAction !== null}
             className="rounded-full bg-foreground px-4 py-2 text-sm font-medium text-background hover:bg-[#383838] disabled:opacity-50 dark:hover:bg-[#ccc]"
           >
-            {busyAction === "generate-all" ? "Generating..." : "Generate images & voiceover (all)"}
+            {busyAction === "generate-all" ? "Generating..." : "Generate voiceover (all)"}
           </button>
           <button
             onClick={handleRenderAll}

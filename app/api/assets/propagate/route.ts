@@ -15,8 +15,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "GEMINI_API_KEY is not configured." }, { status: 500 });
   }
 
-  // Generate images/video + voiceover for the base language if it hasn't
-  // been done yet (this is the one place real image/video cost is paid).
+  // Voiceover for the base language, if it hasn't been done yet. Visuals
+  // (image upload / Pixabay / Pexels) are set separately per scene, not
+  // generated here.
   const base = baseProject.assetsGenerated
     ? baseProject
     : await generateProjectAssets(baseProject);
@@ -25,7 +26,7 @@ export async function POST(request: NextRequest) {
   for (const sibling of siblingProjects ?? []) {
     try {
       let updated = await copySceneVisuals(base, sibling);
-      updated = await generateProjectAssets(updated, { assetTypes: ["audio"] });
+      updated = await generateProjectAssets(updated);
       siblings.push(updated);
     } catch (err) {
       siblings.push({

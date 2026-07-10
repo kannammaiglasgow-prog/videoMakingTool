@@ -53,9 +53,9 @@ export default function PreviewPage() {
     setAssetsError(null);
     try {
       if (project.siblings && project.siblings.length > 0) {
-        // Multi-language project: generate images/video once on this
-        // language, then copy them into every sibling language and
-        // generate each sibling's own voiceover.
+        // Multi-language project: voiceover for this language, then copy
+        // this language's visuals (upload/Pixabay/Pexels) into every
+        // sibling language and generate each sibling's own voiceover.
         const siblingProjects = project.siblings
           .map((s) => {
             const raw = localStorage.getItem(`project:${s.id}`);
@@ -100,29 +100,6 @@ export default function PreviewPage() {
     }
   }
 
-  async function handleRegenerateScene(sceneNumber: number) {
-    if (!project) return;
-    setRegeneratingScene(sceneNumber);
-    setAssetsError(null);
-    try {
-      const res = await fetch("/api/assets", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ project, sceneNumbers: [sceneNumber] }),
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error ?? "Scene regeneration failed.");
-      }
-      const updated = await res.json();
-      persist(updated);
-    } catch (err) {
-      setAssetsError(err instanceof Error ? err.message : "Something went wrong.");
-    } finally {
-      setRegeneratingScene(null);
-    }
-  }
-
   async function ensureVoiceover(currentProject: GeneratedProject, sceneNumber: number) {
     const res = await fetch("/api/assets", {
       method: "POST",
@@ -130,7 +107,6 @@ export default function PreviewPage() {
       body: JSON.stringify({
         project: currentProject,
         sceneNumbers: [sceneNumber],
-        assetTypes: ["audio"],
       }),
     });
     if (!res.ok) {
@@ -428,10 +404,10 @@ export default function PreviewPage() {
             className="rounded-full bg-foreground px-5 py-2.5 text-sm font-medium text-background transition-colors hover:bg-[#383838] disabled:opacity-50 dark:hover:bg-[#ccc]"
           >
             {generatingAssets
-              ? "Generating images & voiceover..."
+              ? "Generating voiceover..."
               : project.assetsGenerated
-                ? "Regenerate images & voiceover"
-                : "Generate images & voiceover"}
+                ? "Regenerate voiceover"
+                : "Generate voiceover"}
           </button>
           {project.subtitles && (
             <>
@@ -500,13 +476,6 @@ export default function PreviewPage() {
                   <span className="text-xs text-zinc-500">
                     {scene.start} – {scene.end}
                   </span>
-                  <button
-                    onClick={() => handleRegenerateScene(scene.scene)}
-                    disabled={regeneratingScene !== null || batchProvider !== null}
-                    className="rounded-full border border-zinc-300 px-3 py-1 text-xs font-medium text-zinc-800 hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
-                  >
-                    {regeneratingScene === scene.scene ? "Working..." : "Regenerate"}
-                  </button>
                   <button
                     onClick={() => handleGenerateVoiceover(scene.scene)}
                     disabled={regeneratingScene !== null || batchProvider !== null}

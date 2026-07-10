@@ -1,26 +1,27 @@
 import fs from "fs/promises";
 import path from "path";
-import { generateSceneImage } from "@/lib/visualAgent";
 import { generateVoiceover } from "@/lib/audioAgent";
 import { generateSrt, generateVtt } from "@/lib/subtitles";
 import { GeneratedProject, Scene } from "@/types/project";
 
 export interface AssetGenOptions {
   sceneNumbers?: number[];
-  assetTypes?: ("image" | "audio")[];
 }
 
 export function projectDir(projectId: string): string {
   return path.join(process.cwd(), "public", "generated", projectId);
 }
 
+/**
+ * Generates voiceover only. AI image generation was removed entirely (cost
+ * driver) — a scene's visual must come from a manual upload or a stock
+ * video (Pixabay/Pexels) via the dedicated endpoints for those.
+ */
 export async function generateProjectAssets(
   project: GeneratedProject,
   options: AssetGenOptions = {}
 ): Promise<GeneratedProject> {
-  const { sceneNumbers, assetTypes } = options;
-  const wantImage = !assetTypes || assetTypes.includes("image");
-  const wantAudio = !assetTypes || assetTypes.includes("audio");
+  const { sceneNumbers } = options;
 
   const dir = projectDir(project.id);
   await fs.mkdir(dir, { recursive: true });
@@ -35,31 +36,13 @@ export async function generateProjectAssets(
 
       const result: Scene = { ...scene, assetError: undefined };
 
-      if (wantImage) {
-        try {
-          const imageBuffer = await generateSceneImage(scene.imagePrompt);
-          const imageFile = `scene-${scene.scene}.png`;
-          await fs.writeFile(path.join(dir, imageFile), imageBuffer);
-          result.imageUrl = `/generated/${project.id}/${imageFile}`;
-        } catch (err) {
-          result.assetError = `Image generation failed: ${err instanceof Error ? err.message : "unknown error"}`;
-        }
-      }
-
-      if (wantAudio) {
-        try {
-          const audioBuffer = await generateVoiceover(scene.voiceover, project.voice, project.language);
-          const audioFile = `scene-${scene.scene}.wav`;
-          await fs.writeFile(path.join(dir, audioFile), audioBuffer);
-          result.audioUrl = `/generated/${project.id}/${audioFile}`;
-        } catch (err) {
-          result.assetError = [
-            result.assetError,
-            `Voiceover generation failed: ${err instanceof Error ? err.message : "unknown error"}`,
-          ]
-            .filter(Boolean)
-            .join(" | ");
-        }
+      try {
+        const audioBuffer = await generateVoiceover(scene.voiceover, project.voice, project.language);
+        const audioFile = `scene-${scene.scene}.wav`;
+        await fs.writeFile(path.join(dir, audioFile), audioBuffer);
+        result.audioUrl = `/generated/${project.id}/${audioFile}`;
+      } catch (err) {
+        result.assetError = `Voiceover generation failed: ${err instanceof Error ? err.message : "unknown error"}`;
       }
 
       return result;

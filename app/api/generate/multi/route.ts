@@ -35,10 +35,11 @@ export async function POST(request: NextRequest) {
       (err instanceof Error ? err.message : "Unknown error.");
   }
 
-  // Script/scenes only here — no images, video, or voiceover yet. Assets are
-  // generated later (once, on whichever language the user opens first) via
-  // the preview page's "Generate images & voiceover" button, which then
-  // propagates the same images/video to every sibling language.
+  // Script/scenes only here — no voiceover yet, and visuals (image upload /
+  // Pixabay / Pexels) are never AI-generated. Voiceover is produced later,
+  // once per language, via the preview page's "Generate voiceover" button,
+  // which also copies whichever visuals were set on this language to every
+  // sibling language.
   const projects: GeneratedProject[] = [base];
 
   for (const lang of otherLanguages) {

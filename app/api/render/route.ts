@@ -8,7 +8,7 @@ export async function POST(request: NextRequest) {
 
   if (!project?.id || !project.assetsGenerated) {
     return NextResponse.json(
-      { error: "Generate images and voiceover before rendering." },
+      { error: "Add visuals and generate voiceover for every scene before rendering." },
       { status: 400 }
     );
   }

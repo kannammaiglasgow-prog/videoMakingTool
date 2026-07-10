@@ -3,10 +3,9 @@ import { generateProjectAssets } from "@/lib/assetGeneration";
 import { GeneratedProject } from "@/types/project";
 
 export async function POST(request: NextRequest) {
-  const { project, sceneNumbers, assetTypes } = (await request.json()) as {
+  const { project, sceneNumbers } = (await request.json()) as {
     project: GeneratedProject;
     sceneNumbers?: number[];
-    assetTypes?: ("image" | "audio")[];
   };
 
   if (!project?.id || !project.scenes?.length) {
@@ -17,6 +16,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "GEMINI_API_KEY is not configured." }, { status: 500 });
   }
 
-  const updatedProject = await generateProjectAssets(project, { sceneNumbers, assetTypes });
+  const updatedProject = await generateProjectAssets(project, { sceneNumbers });
   return NextResponse.json(updatedProject);
 }

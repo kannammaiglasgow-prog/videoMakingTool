@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
     // `siblings` list and keeps the same localStorage/asset folder key.
     translated = { ...translated, id: existingId };
     translated = await copySceneVisuals(baseProject, translated);
-    translated = await generateProjectAssets(translated, { assetTypes: ["audio"] });
+    translated = await generateProjectAssets(translated);
     return NextResponse.json(translated);
   } catch (err) {
     return NextResponse.json(
