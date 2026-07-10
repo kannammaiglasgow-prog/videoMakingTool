@@ -22,7 +22,18 @@ function formatLength(seconds: VideoLength): string {
   const minutes = seconds / 60;
   return `${minutes} min`;
 }
-const LANGUAGES: Language[] = ["Tamil", "English", "Hindi", "Malayalam", "Telugu"];
+const LANGUAGES: Language[] = [
+  "Tamil",
+  "English",
+  "Hindi",
+  "Malayalam",
+  "Telugu",
+  "Kannada",
+  "Arabic",
+  "French",
+  "German",
+  "Spanish",
+];
 const AUDIENCES: Audience[] = ["General public", "Students", "Parents", "Professionals", "Kids"];
 const TONES: Tone[] = [
   "Neutral",
@@ -111,7 +122,7 @@ export default function CreateForm() {
     try {
       if (multiLanguage) {
         setProgress(
-          `Generating base video, images and voiceover for ${selectedLanguages.length} language(s)... this can take a few minutes.`
+          `Generating script and scenes for ${selectedLanguages.length} language(s)...`
         );
         const res = await fetch("/api/generate/multi", {
           method: "POST",
@@ -128,7 +139,7 @@ export default function CreateForm() {
         for (const project of projects) {
           localStorage.setItem(`project:${project.id}`, JSON.stringify(project));
         }
-        router.push(`/preview/${projects[0].id}`);
+        router.push(`/languages/${projects[0].id}`);
       } else {
         const res = await fetch("/api/generate", {
           method: "POST",

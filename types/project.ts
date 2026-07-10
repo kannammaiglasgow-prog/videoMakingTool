@@ -1,6 +1,16 @@
 export type VideoLength = 15 | 30 | 45 | 60 | 120 | 300 | 480 | 600;
 
-export type Language = "Tamil" | "English" | "Hindi" | "Malayalam" | "Telugu";
+export type Language =
+  | "Tamil"
+  | "English"
+  | "Hindi"
+  | "Malayalam"
+  | "Telugu"
+  | "Kannada"
+  | "Arabic"
+  | "French"
+  | "German"
+  | "Spanish";
 
 export type Audience =
   | "General public"

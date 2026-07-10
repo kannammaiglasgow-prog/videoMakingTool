@@ -381,6 +381,12 @@ export default function PreviewPage() {
                 {s.language}
               </Link>
             ))}
+            <Link
+              href={`/languages/${project.id}`}
+              className="ml-auto text-xs font-medium underline text-zinc-700 dark:text-zinc-300"
+            >
+              Manage all languages →
+            </Link>
           </div>
         )}
 
