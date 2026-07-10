@@ -908,6 +908,12 @@ export default function CreatePage() {
               </div>
             </div>
 
+            {error && (
+              <div className="mt-4 p-3 rounded-lg border border-red-900/50 bg-red-950/20 text-red-400 text-xs font-semibold leading-normal">
+                Error: {error}
+              </div>
+            )}
+
             <button
               onClick={() => {
                 setCurrentStep(8);
