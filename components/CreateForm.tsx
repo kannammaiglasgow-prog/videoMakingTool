@@ -71,6 +71,15 @@ export default function CreateForm() {
   const [settings, setSettings] = useState<ProjectSettings>(DEFAULT_SETTINGS);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [multiLanguage, setMultiLanguage] = useState(false);
+  const [selectedLanguages, setSelectedLanguages] = useState<Language[]>(["English", "Tamil"]);
+  const [progress, setProgress] = useState<string | null>(null);
+
+  function toggleLanguage(lang: Language) {
+    setSelectedLanguages((prev) =>
+      prev.includes(lang) ? prev.filter((l) => l !== lang) : [...prev, lang]
+    );
+  }
 
   function updateSetting<K extends keyof ProjectSettings>(key: K, value: ProjectSettings[K]) {
     setSettings((prev) => ({ ...prev, [key]: value }));
@@ -93,26 +102,54 @@ export default function CreateForm() {
       return;
     }
 
+    if (multiLanguage && selectedLanguages.length === 0) {
+      setError("Select at least one language.");
+      return;
+    }
+
     setLoading(true);
     try {
-      const res = await fetch("/api/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text, imageDataUrl, settings }),
-      });
+      if (multiLanguage) {
+        setProgress(
+          `Generating base video, images and voiceover for ${selectedLanguages.length} language(s)... this can take a few minutes.`
+        );
+        const res = await fetch("/api/generate/multi", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text, imageDataUrl, settings, languages: selectedLanguages }),
+        });
 
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error ?? "Generation failed.");
+        if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.error ?? "Generation failed.");
+        }
+
+        const { projects } = (await res.json()) as { projects: { id: string }[] };
+        for (const project of projects) {
+          localStorage.setItem(`project:${project.id}`, JSON.stringify(project));
+        }
+        router.push(`/preview/${projects[0].id}`);
+      } else {
+        const res = await fetch("/api/generate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text, imageDataUrl, settings }),
+        });
+
+        if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.error ?? "Generation failed.");
+        }
+
+        const project = await res.json();
+        localStorage.setItem(`project:${project.id}`, JSON.stringify(project));
+        router.push(`/preview/${project.id}`);
       }
-
-      const project = await res.json();
-      localStorage.setItem(`project:${project.id}`, JSON.stringify(project));
-      router.push(`/preview/${project.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
     } finally {
       setLoading(false);
+      setProgress(null);
     }
   }
 
@@ -140,6 +177,40 @@ export default function CreateForm() {
         )}
       </Field>
 
+      <div className="rounded-md border border-zinc-300 p-3 dark:border-zinc-700">
+        <label className="flex items-center gap-2 text-sm font-medium text-zinc-700 dark:text-zinc-300">
+          <input
+            type="checkbox"
+            checked={multiLanguage}
+            onChange={(e) => setMultiLanguage(e.target.checked)}
+          />
+          Generate in multiple languages (one click)
+        </label>
+        {multiLanguage && (
+          <div className="mt-3 flex flex-wrap gap-3">
+            {LANGUAGES.map((lang) => (
+              <label
+                key={lang}
+                className="flex items-center gap-1.5 text-sm text-zinc-700 dark:text-zinc-300"
+              >
+                <input
+                  type="checkbox"
+                  checked={selectedLanguages.includes(lang)}
+                  onChange={() => toggleLanguage(lang)}
+                />
+                {lang}
+              </label>
+            ))}
+          </div>
+        )}
+        {multiLanguage && (
+          <p className="mt-2 text-xs text-zinc-500">
+            Images/video are generated once and reused across every selected language; only the
+            script and voiceover are regenerated per language.
+          </p>
+        )}
+      </div>
+
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
         <Field label="Video length">
           <select
@@ -155,19 +226,21 @@ export default function CreateForm() {
           </select>
         </Field>
 
-        <Field label="Language">
-          <select
-            className={selectClass}
-            value={settings.language}
-            onChange={(e) => updateSetting("language", e.target.value as Language)}
-          >
-            {LANGUAGES.map((v) => (
-              <option key={v} value={v}>
-                {v}
-              </option>
-            ))}
-          </select>
-        </Field>
+        {!multiLanguage && (
+          <Field label="Language">
+            <select
+              className={selectClass}
+              value={settings.language}
+              onChange={(e) => updateSetting("language", e.target.value as Language)}
+            >
+              {LANGUAGES.map((v) => (
+                <option key={v} value={v}>
+                  {v}
+                </option>
+              ))}
+            </select>
+          </Field>
+        )}
 
         <Field label="Target audience">
           <select
@@ -269,13 +342,14 @@ export default function CreateForm() {
       </div>
 
       {error && <p className="text-sm text-red-600">{error}</p>}
+      {progress && <p className="text-sm text-zinc-600 dark:text-zinc-400">{progress}</p>}
 
       <button
         type="submit"
         disabled={loading}
         className="rounded-full bg-foreground px-6 py-3 text-sm font-medium text-background transition-colors hover:bg-[#383838] disabled:opacity-50 dark:hover:bg-[#ccc]"
       >
-        {loading ? "Generating..." : "Generate"}
+        {loading ? "Generating..." : multiLanguage ? "Generate all languages" : "Generate"}
       </button>
     </form>
   );

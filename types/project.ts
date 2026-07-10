@@ -110,4 +110,5 @@ export interface GeneratedProject {
   };
   assetsGenerated?: boolean;
   videoUrl?: string;
+  siblings?: { id: string; language: Language }[];
 }

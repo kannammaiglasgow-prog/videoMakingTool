@@ -339,6 +339,21 @@ export default function PreviewPage() {
           </div>
         )}
 
+        {project.siblings && project.siblings.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2 rounded-md border border-zinc-200 bg-white p-3 text-sm dark:border-zinc-800 dark:bg-zinc-900">
+            <span className="text-zinc-500">Also generated in:</span>
+            {project.siblings.map((s) => (
+              <Link
+                key={s.id}
+                href={`/preview/${s.id}`}
+                className="rounded-full border border-zinc-300 px-3 py-1 text-xs font-medium text-zinc-800 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
+              >
+                {s.language}
+              </Link>
+            ))}
+          </div>
+        )}
+
         <div className="flex flex-wrap items-center gap-3">
           <button
             onClick={() => setEditing((e) => !e)}
