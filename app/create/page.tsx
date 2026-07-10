@@ -266,6 +266,53 @@ export default function CreatePage() {
     }
   }
 
+  async function handleGenerateVoiceoverLocal(sceneNumber: number) {
+    if (projects.length === 0) return;
+    const project = projects[0];
+    setError(null);
+    setGenerating(true);
+    try {
+      const res = await fetch("/api/assets", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ project, sceneNumbers: [sceneNumber] }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error ?? "Voiceover generation failed.");
+      }
+      const updated = await res.json();
+      updateProjectInState(updated);
+      
+      // Update sibling projects if any
+      if (updated.siblings && updated.siblings.length > 0) {
+        const siblingProjects = updated.siblings
+          .map((s: { id: string }) => {
+            const raw = localStorage.getItem(`project:${s.id}`);
+            return raw ? (JSON.parse(raw) as GeneratedProject) : null;
+          })
+          .filter((p: GeneratedProject | null): p is GeneratedProject => p !== null);
+
+        const propagateRes = await fetch("/api/assets/propagate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ baseProject: updated, siblingProjects }),
+        });
+        if (propagateRes.ok) {
+          const { base: updatedBase, siblings: updatedSiblings } = await propagateRes.json();
+          updateProjectInState(updatedBase);
+          updatedSiblings.forEach((sibling: GeneratedProject) => {
+            saveProject(sibling);
+          });
+        }
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong.");
+    } finally {
+      setGenerating(false);
+    }
+  }
+
   async function handleGenerateAllVideos() {
     if (projects.length === 0) return;
     setGenerating(true);
@@ -836,9 +883,27 @@ export default function CreatePage() {
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-purple-300">Scene {scene.id} Audio</span>
                     {audioUrls[idx] ? (
-                      <audio controls src={audioUrls[idx]} className="h-6 max-w-[170px]" />
+                      <div className="flex items-center gap-2">
+                        <audio controls src={audioUrls[idx]} className="h-6 max-w-[120px]" />
+                        <button
+                          onClick={() => handleGenerateVoiceoverLocal(scene.id)}
+                          disabled={generating}
+                          className="px-2 py-0.5 border border-slate-700 hover:bg-slate-800 rounded text-[9px] font-semibold text-slate-300 disabled:opacity-50"
+                        >
+                          Retry
+                        </button>
+                      </div>
                     ) : (
-                      <span className="text-[10px] text-amber-500 font-semibold">Missing voiceover</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-amber-500 font-semibold font-semibold">Missing</span>
+                        <button
+                          onClick={() => handleGenerateVoiceoverLocal(scene.id)}
+                          disabled={generating}
+                          className="px-2 py-0.5 bg-purple-600 hover:bg-purple-500 rounded text-[9px] font-semibold text-white disabled:opacity-50"
+                        >
+                          Generate
+                        </button>
+                      </div>
                     )}
                   </div>
                   <p className="text-[11px] text-slate-400 line-clamp-1 italic">"{scene.title}"</p>

@@ -34,6 +34,17 @@ export async function generateProjectAssets(
         return scene;
       }
 
+      // Skip generating if audio already exists and is accessible
+      if (scene.audioUrl) {
+        const audioFile = `scene-${scene.scene}.wav`;
+        try {
+          await fs.access(path.join(dir, audioFile));
+          return { ...scene, assetError: undefined };
+        } catch {
+          // File missing, proceed to generate
+        }
+      }
+
       const result: Scene = { ...scene, assetError: undefined };
 
       try {
