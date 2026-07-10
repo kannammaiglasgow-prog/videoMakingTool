@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { GeneratedProject, Language, ProjectSettings } from "@/types/project";
 import { LanguageExportRow, LanguageOption, OutputTab, StudioScene, StudioStatus } from "@/types/studio";
 import { DEFAULT_CONTENT_INPUT, DEFAULT_SETTINGS, LANGUAGE_OPTIONS } from "@/lib/studio/mockData";
@@ -36,6 +37,7 @@ function toStudioScenes(project: GeneratedProject | undefined): StudioScene[] {
 }
 
 export default function CreatePage() {
+  const router = useRouter();
   const [content, setContent] = useState(DEFAULT_CONTENT_INPUT);
   const [imageDataUrl, setImageDataUrl] = useState<string | undefined>(undefined);
   const [settings, setSettings] = useState<ProjectSettings>(DEFAULT_SETTINGS);
@@ -306,7 +308,16 @@ export default function CreatePage() {
         />
       </div>
 
-      <SceneTimeline scenes={studioScenes} totalDuration={primaryProject?.duration ?? settings.duration} />
+      <SceneTimeline
+        scenes={studioScenes}
+        totalDuration={primaryProject?.duration ?? settings.duration}
+        onNextStep={() => {
+          if (primaryProject) {
+            router.push(`/preview/${primaryProject.id}`);
+          }
+        }}
+        nextDisabled={!primaryProject}
+      />
     </div>
   );
 }
