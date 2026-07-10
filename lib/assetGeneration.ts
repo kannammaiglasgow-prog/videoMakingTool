@@ -53,6 +53,7 @@ export async function generateProjectAssets(
         await fs.writeFile(path.join(dir, audioFile), audioBuffer);
         result.audioUrl = `/generated/${project.id}/${audioFile}`;
       } catch (err) {
+        console.error(`[assetGeneration] Voiceover generation failed for scene ${scene.scene}:`, err);
         result.assetError = `Voiceover generation failed: ${err instanceof Error ? err.message : "unknown error"}`;
       }
 

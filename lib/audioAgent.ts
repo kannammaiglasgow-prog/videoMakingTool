@@ -58,6 +58,10 @@ async function generateVoiceoverGemini(text: string, voice: Voice): Promise<Buff
   const res = await fetchGeminiWithRetry(`${API_BASE}/${TTS_MODEL}:generateContent?key=${key}`, body);
 
   const data = await res.json();
+  if (data.error) {
+    throw new Error(data.error.message || `Gemini API Error: ${data.error.status || "Unknown Status"}`);
+  }
+
   const part = data?.candidates?.[0]?.content?.parts?.[0];
   const inline = part?.inlineData;
 

@@ -866,6 +866,12 @@ export default function CreatePage() {
               {generating ? "Generating Voiceovers..." : "Generate / Sync All Voiceovers"}
             </button>
 
+            {error && (
+              <div className="mt-2 p-2 rounded border border-red-900/50 bg-red-950/20 text-red-400 text-xs font-semibold leading-normal">
+                Error: {error}
+              </div>
+            )}
+
             {primaryProject?.subtitles && (
               <div className="flex gap-3 border-y border-slate-800 py-3 mt-1.5">
                 <a href={primaryProject.subtitles.srtUrl} download className="text-xs font-bold text-purple-400 hover:underline">
