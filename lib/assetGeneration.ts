@@ -48,7 +48,7 @@ export async function generateProjectAssets(
 
       if (wantAudio) {
         try {
-          const audioBuffer = await generateVoiceover(scene.voiceover, project.voice);
+          const audioBuffer = await generateVoiceover(scene.voiceover, project.voice, project.language);
           const audioFile = `scene-${scene.scene}.wav`;
           await fs.writeFile(path.join(dir, audioFile), audioBuffer);
           result.audioUrl = `/generated/${project.id}/${audioFile}`;

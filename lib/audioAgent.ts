@@ -1,5 +1,6 @@
-import { Voice } from "@/types/project";
+import { Language, Voice } from "@/types/project";
 import { fetchGeminiWithRetry } from "@/lib/gemini";
+import { generateVoiceoverGoogle } from "@/lib/googleTtsAgent";
 
 const API_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
 const TTS_MODEL = "gemini-2.5-flash-preview-tts";
@@ -39,7 +40,7 @@ function pcmToWav(pcm: Buffer, sampleRate = 24000, numChannels = 1, bitsPerSampl
   return Buffer.concat([header, pcm]);
 }
 
-export async function generateVoiceover(text: string, voice: Voice): Promise<Buffer> {
+async function generateVoiceoverGemini(text: string, voice: Voice): Promise<Buffer> {
   const key = getApiKey();
   const voiceName = VOICE_MAP[voice] ?? "Kore";
 
@@ -67,4 +68,26 @@ export async function generateVoiceover(text: string, voice: Voice): Promise<Buf
   const sampleRate = rateMatch ? Number(rateMatch[1]) : 24000;
 
   return pcmToWav(pcm, sampleRate);
+}
+
+function googleTtsConfigured() {
+  return Boolean(
+    process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON || process.env.GOOGLE_APPLICATION_CREDENTIALS
+  );
+}
+
+export async function generateVoiceover(
+  text: string,
+  voice: Voice,
+  language: Language = "English"
+): Promise<Buffer> {
+  try {
+    return await generateVoiceoverGemini(text, voice);
+  } catch (err) {
+    if (!googleTtsConfigured()) throw err;
+    // Gemini TTS failed (e.g. daily quota exhausted) — fall back to Google
+    // Cloud Text-to-Speech instead of failing the whole scene outright.
+    console.error("Gemini TTS failed, falling back to Google Cloud TTS:", err);
+    return await generateVoiceoverGoogle(text, voice, language);
+  }
 }
